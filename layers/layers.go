@@ -59,7 +59,7 @@ func (l *Layer) Remove() {
 }
 
 func (l *Layer) Front() {
-	l.l.layers.MoveToFront(l.e)
+	l.l.layers.MoveToBack(l.e)
 }
 
 func (l *Layer) Image() *image.RGBA {
