@@ -7,18 +7,21 @@ import (
 	"image/draw"
 )
 
+type ImageFlusher interface {
+	Image() *image.RGBA
+	Flush(r image.Rectangle)
+}
+
 type Layers struct {
-	dst    draw.Image
-	r      image.Rectangle
+	dst    ImageFlusher
 	layers list.List
 }
 
-func (l *Layers) Dst(dst draw.Image, r image.Rectangle) {
+func (l *Layers) Dst(dst ImageFlusher) {
 	l.dst = dst
-	l.r = r
 	for e := l.layers.Front(); e != nil; e = e.Next() {
 		layer := e.Value.(*Layer)
-		rgba := image.NewRGBA(r)
+		rgba := image.NewRGBA(dst.Image().Bounds())
 		draw.Draw(rgba, layer.rgba.Bounds(), layer.rgba, layer.rgba.Bounds().Min, draw.Src)
 		layer.rgba = rgba
 	}
@@ -27,7 +30,7 @@ func (l *Layers) Dst(dst draw.Image, r image.Rectangle) {
 func (l *Layers) Push() *Layer {
 	layer := &Layer{
 		l:    l,
-		rgba: image.NewRGBA(l.r),
+		rgba: image.NewRGBA(l.dst.Image().Bounds()),
 	}
 	layer.e = l.layers.PushBack(layer)
 	return layer
@@ -37,11 +40,12 @@ func (l *Layers) Flush(r image.Rectangle) {
 	if l.dst == nil {
 		panic(errors.New("layers: Flush: no destination"))
 	}
-	draw.Draw(l.dst, r, image.Transparent, r.Min, draw.Src)
+	draw.Draw(l.dst.Image(), r, image.Transparent, r.Min, draw.Src)
 	for e := l.layers.Front(); e != nil; e = e.Next() {
 		layer := e.Value.(*Layer)
-		draw.Draw(l.dst, r, layer.rgba, r.Min, draw.Over)
+		draw.Draw(l.dst.Image(), r, layer.rgba, r.Min, draw.Over)
 	}
+	l.dst.Flush(r)
 }
 
 type Layer struct {
