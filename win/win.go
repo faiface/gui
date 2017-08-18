@@ -3,9 +3,9 @@ package win
 import (
 	"image"
 	"image/draw"
-	"local/win/event"
 	"time"
 
+	"github.com/faiface/gui/event"
 	"github.com/faiface/mainthread"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -34,10 +34,9 @@ func New(opts ...Option) (*Win, error) {
 		return nil, err
 	}
 
-	w.resize(o.width, o.height)
-
 	events := make(chan string)
 	mainthread.Call(func() {
+		w.resize(o.width, o.height)
 		w.setUpEvents(events)
 	})
 
@@ -132,34 +131,47 @@ var curWin *Win = nil
 
 func (w *Win) Flush(r image.Rectangle) {
 	w.Dispatch.Happen(mkEvent("wi", "flush", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y))
-
 	mainthread.Call(func() {
-		if curWin != w {
-			w.w.MakeContextCurrent()
-			err := gl.Init()
-			if err != nil {
-				return
-			}
-			curWin = w
-		}
-
-		tmp := image.NewRGBA(r)
-		draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
-
-		gl.RasterPos2d(
-			-1+2*float64(r.Min.X)/float64(w.rgba.Bounds().Dx()),
-			+1-2*float64(r.Min.Y)/float64(w.rgba.Bounds().Dy()),
-		)
-		gl.PixelZoom(1, -1)
-		gl.DrawPixels(
-			int32(r.Dx()),
-			int32(r.Dy()),
-			gl.RGBA,
-			gl.UNSIGNED_BYTE,
-			gl.Ptr(tmp.Pix),
-		)
-		gl.Flush()
+		w.flush(r)
 	})
+}
+
+func (w *Win) flush(r image.Rectangle) {
+	if curWin != w {
+		w.w.MakeContextCurrent()
+		err := gl.Init()
+		if err != nil {
+			return
+		}
+		curWin = w
+	}
+
+	bounds := w.rgba.Bounds()
+	r = bounds.Intersect(r)
+
+	tmp := image.NewRGBA(r)
+	draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
+
+	gl.DrawBuffer(gl.FRONT)
+	gl.Viewport(
+		int32(bounds.Min.X),
+		int32(bounds.Min.Y),
+		int32(bounds.Dx()),
+		int32(bounds.Dy()),
+	)
+	gl.RasterPos2d(
+		-1+2*float64(r.Min.X)/float64(bounds.Dx()),
+		+1-2*float64(r.Min.Y)/float64(bounds.Dy()),
+	)
+	gl.PixelZoom(1, -1)
+	gl.DrawPixels(
+		int32(r.Dx()),
+		int32(r.Dy()),
+		gl.RGBA,
+		gl.UNSIGNED_BYTE,
+		gl.Ptr(tmp.Pix),
+	)
+	gl.Flush()
 }
 
 func (w *Win) close() error {
@@ -175,4 +187,5 @@ func (w *Win) resize(width, height int) {
 		draw.Draw(rgba, w.rgba.Bounds(), w.rgba, w.rgba.Bounds().Min, draw.Src)
 	}
 	w.rgba = rgba
+	w.flush(bounds)
 }
