@@ -14,30 +14,36 @@ func (w *Win) setUpEvents(events chan<- string) {
 	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
 		switch action {
 		case glfw.Press:
-			events <- mkEvent("mo", "down", moX, moY)
+			sendEvent(events, "mo", "down", moX, moY)
 		case glfw.Release:
-			events <- mkEvent("mo", "up", moX, moY)
+			sendEvent(events, "mo", "up", moX, moY)
 		}
 	})
 
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
-		events <- mkEvent("mo", "move", moX, moY)
+		sendEvent(events, "mo", "move", moX, moY)
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
-		events <- mkEvent("kb", "type", r)
+		sendEvent(events, "kb", "type", r)
 	})
 
 	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
 		w.resize(width, height)
-		events <- mkEvent("wi", "resize", width, height)
+		sendEvent(events, "wi", "resize", width, height)
 	})
 
 	w.w.SetCloseCallback(func(_ *glfw.Window) {
 		events <- mkEvent("wi", "close")
 		w.close()
 	})
+}
+
+func sendEvent(events chan<- string, a ...interface{}) {
+	go func() {
+		events <- mkEvent(a...)
+	}()
 }
 
 func mkEvent(a ...interface{}) string {
