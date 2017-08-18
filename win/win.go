@@ -11,6 +11,33 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
+type Option func(*options)
+
+type options struct {
+	title         string
+	width, height int
+	resizable     bool
+}
+
+func Title(title string) Option {
+	return func(o *options) {
+		o.title = title
+	}
+}
+
+func Size(width, height int) Option {
+	return func(o *options) {
+		o.width = width
+		o.height = height
+	}
+}
+
+func Resizable() Option {
+	return func(o *options) {
+		o.resizable = true
+	}
+}
+
 func New(opts ...Option) (*Win, error) {
 	o := options{
 		title:     "",
@@ -83,33 +110,6 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 		return nil, err
 	}
 	return w, nil
-}
-
-type Option func(*options)
-
-func Title(title string) Option {
-	return func(o *options) {
-		o.title = title
-	}
-}
-
-func Size(width, height int) Option {
-	return func(o *options) {
-		o.width = width
-		o.height = height
-	}
-}
-
-func Resizable() Option {
-	return func(o *options) {
-		o.resizable = true
-	}
-}
-
-type options struct {
-	title         string
-	width, height int
-	resizable     bool
 }
 
 type Win struct {
