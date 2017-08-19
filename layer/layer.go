@@ -40,11 +40,17 @@ func (l *List) Push() *Layer {
 }
 
 func (l *List) Remove(layer *Layer) {
+	if layer.l == nil {
+		panic(errors.New("layer: Remove: layer already removed"))
+	}
 	l.layers.Remove(layer.e)
 	layer.l = nil
 }
 
 func (l *List) Front(layer *Layer) {
+	if layer.l == nil {
+		panic(errors.New("layer: Front: layer removed"))
+	}
 	l.layers.MoveToFront(layer.e)
 }
 
@@ -89,5 +95,8 @@ func (l *Layer) Image() *image.RGBA {
 }
 
 func (l *Layer) Flush(r image.Rectangle) {
+	if l.l == nil {
+		panic(errors.New("layer: Flush: layer removed"))
+	}
 	l.l.Flush(r)
 }
