@@ -31,7 +31,7 @@ func (w *Win) setUpMainthreadEvents() {
 
 	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
 		w.resize(width, height)
-		w.mainthreadEvent("wi", "resize", width, height)
+		w.mainthreadEvent("resize", width, height)
 	})
 
 	w.w.SetCloseCallback(func(_ *glfw.Window) {
