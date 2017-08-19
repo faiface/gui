@@ -39,6 +39,15 @@ func (l *List) Push() *Layer {
 	return layer
 }
 
+func (l *List) Remove(layer *Layer) {
+	l.layers.Remove(layer.e)
+	layer.l = nil
+}
+
+func (l *List) Front(layer *Layer) {
+	l.layers.MoveToFront(layer.e)
+}
+
 func (l *List) Flush(r image.Rectangle) {
 	if l.dst == nil {
 		panic(errors.New("layer: Flush: no destination"))
@@ -71,12 +80,8 @@ type Layer struct {
 	rgba *image.RGBA
 }
 
-func (l *Layer) Remove() {
-	l.l.layers.Remove(l.e)
-}
-
-func (l *Layer) Front() {
-	l.l.layers.MoveToFront(l.e)
+func (l *Layer) List() *List {
+	return l.l
 }
 
 func (l *Layer) Image() *image.RGBA {
