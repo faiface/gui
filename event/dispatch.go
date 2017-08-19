@@ -9,11 +9,11 @@ const Sep = "/"
 
 type Dispatch struct {
 	mu       sync.Mutex
-	handlers []func(event string)
+	handlers []func(event string) bool
 	trie     map[string]*Dispatch
 }
 
-func (d *Dispatch) Event(pattern string, handler func(event string)) {
+func (d *Dispatch) Event(pattern string, handler func(event string) bool) {
 	if pattern == "" {
 		d.event(nil, handler)
 		return
@@ -21,15 +21,14 @@ func (d *Dispatch) Event(pattern string, handler func(event string)) {
 	d.event(strings.Split(pattern, Sep), handler)
 }
 
-func (d *Dispatch) Happen(event string) {
+func (d *Dispatch) Happen(event string) bool {
 	if event == "" {
-		d.happen(nil)
-		return
+		return d.happen(nil)
 	}
-	d.happen(strings.Split(event, Sep))
+	return d.happen(strings.Split(event, Sep))
 }
 
-func (d *Dispatch) event(pattern []string, handler func(event string)) {
+func (d *Dispatch) event(pattern []string, handler func(event string) bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -47,17 +46,19 @@ func (d *Dispatch) event(pattern []string, handler func(event string)) {
 	d.trie[pattern[0]].event(pattern[1:], handler)
 }
 
-func (d *Dispatch) happen(event []string) {
+func (d *Dispatch) happen(event []string) bool {
 	d.mu.Lock()
 	handlers := d.handlers
 	d.mu.Unlock()
 
 	for _, handler := range handlers {
-		handler(strings.Join(event, Sep))
+		if handler(strings.Join(event, Sep)) {
+			return true
+		}
 	}
 
 	if len(event) == 0 {
-		return
+		return false
 	}
 
 	d.mu.Lock()
@@ -65,6 +66,7 @@ func (d *Dispatch) happen(event []string) {
 	d.mu.Unlock()
 
 	if next != nil {
-		next.happen(event[1:])
+		return next.happen(event[1:])
 	}
+	return false
 }
