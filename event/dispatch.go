@@ -1,11 +1,24 @@
 package event
 
 import (
+	"bytes"
+	"fmt"
 	"strings"
 	"sync"
 )
 
 const Sep = "/"
+
+func Sprint(a ...interface{}) string {
+	var buf bytes.Buffer
+	for i := range a {
+		if i > 0 {
+			buf.WriteString(Sep)
+		}
+		fmt.Fprint(&buf, a[i])
+	}
+	return buf.String()
+}
 
 type Dispatch struct {
 	mu       sync.Mutex
