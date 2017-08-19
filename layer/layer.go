@@ -14,13 +14,13 @@ type ImageFlusher interface {
 	Flush(r image.Rectangle)
 }
 
-type Layers struct {
+type List struct {
 	event.Dispatch
 	dst    ImageFlusher
 	layers list.List
 }
 
-func (l *Layers) Dst(dst ImageFlusher) {
+func (l *List) Dst(dst ImageFlusher) {
 	l.dst = dst
 	for e := l.layers.Back(); e != nil; e = e.Prev() {
 		layer := e.Value.(*Layer)
@@ -30,7 +30,7 @@ func (l *Layers) Dst(dst ImageFlusher) {
 	}
 }
 
-func (l *Layers) Push() *Layer {
+func (l *List) Push() *Layer {
 	layer := &Layer{
 		l:    l,
 		rgba: image.NewRGBA(l.dst.Image().Bounds()),
@@ -39,7 +39,7 @@ func (l *Layers) Push() *Layer {
 	return layer
 }
 
-func (l *Layers) Flush(r image.Rectangle) {
+func (l *List) Flush(r image.Rectangle) {
 	if l.dst == nil {
 		panic(errors.New("layers: Flush: no destination"))
 	}
@@ -51,7 +51,8 @@ func (l *Layers) Flush(r image.Rectangle) {
 	l.dst.Flush(r)
 }
 
-func (l *Layers) Happen(event string) bool {
+func (l *List) Happen(event string) bool {
+	l.Dispatch.Happen(event)
 	for e := l.layers.Front(); e != nil; e = e.Next() {
 		layer := e.Value.(*Layer)
 		if layer.Happen(event) {
@@ -63,7 +64,7 @@ func (l *Layers) Happen(event string) bool {
 
 type Layer struct {
 	event.Dispatch
-	l    *Layers
+	l    *List
 	e    *list.Element
 	rgba *image.RGBA
 }
