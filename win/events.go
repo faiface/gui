@@ -35,8 +35,7 @@ func (w *Win) setUpEvents(events chan<- string) {
 	})
 
 	w.w.SetCloseCallback(func(_ *glfw.Window) {
-		events <- mkEvent("wi", "close")
-		w.close()
+		sendEvent(events, "wi", "close")
 	})
 }
 
