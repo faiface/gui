@@ -14,13 +14,13 @@ type ImageFlusher interface {
 	Flush(r image.Rectangle)
 }
 
-type List struct {
+type LayerList struct {
 	event.Dispatch
 	dst    ImageFlusher
 	layers list.List
 }
 
-func (l *List) Dst(dst ImageFlusher) {
+func (l *LayerList) Dst(dst ImageFlusher) {
 	l.dst = dst
 	for e := l.layers.Back(); e != nil; e = e.Prev() {
 		layer := e.Value.(*Layer)
@@ -30,31 +30,31 @@ func (l *List) Dst(dst ImageFlusher) {
 	}
 }
 
-func (l *List) Push() *Layer {
+func (l *LayerList) Push() *Layer {
 	layer := &Layer{
-		l:    l,
+		lst:  l,
 		rgba: image.NewRGBA(l.dst.Image().Bounds()),
 	}
-	layer.e = l.layers.PushFront(layer)
+	layer.elm = l.layers.PushFront(layer)
 	return layer
 }
 
-func (l *List) Remove(layer *Layer) {
-	if layer.l == nil {
+func (l *LayerList) Remove(layer *Layer) {
+	if layer.lst == nil {
 		panic(errors.New("layer: Remove: layer already removed"))
 	}
-	l.layers.Remove(layer.e)
-	layer.l = nil
+	l.layers.Remove(layer.elm)
+	layer.lst = nil
 }
 
-func (l *List) Front(layer *Layer) {
-	if layer.l == nil {
+func (l *LayerList) Front(layer *Layer) {
+	if layer.lst == nil {
 		panic(errors.New("layer: Front: layer removed"))
 	}
-	l.layers.MoveToFront(layer.e)
+	l.layers.MoveToFront(layer.elm)
 }
 
-func (l *List) Flush(r image.Rectangle) {
+func (l *LayerList) Flush(r image.Rectangle) {
 	if l.dst == nil {
 		panic(errors.New("layer: Flush: no destination"))
 	}
@@ -66,7 +66,7 @@ func (l *List) Flush(r image.Rectangle) {
 	l.dst.Flush(r)
 }
 
-func (l *List) Happen(event string) bool {
+func (l *LayerList) Happen(event string) bool {
 	if l.Dispatch.Happen(event) {
 		return true
 	}
@@ -81,13 +81,13 @@ func (l *List) Happen(event string) bool {
 
 type Layer struct {
 	event.Dispatch
-	l    *List
-	e    *list.Element
+	lst  *LayerList
+	elm  *list.Element
 	rgba *image.RGBA
 }
 
-func (l *Layer) List() *List {
-	return l.l
+func (l *Layer) List() *LayerList {
+	return l.lst
 }
 
 func (l *Layer) Image() *image.RGBA {
@@ -95,8 +95,8 @@ func (l *Layer) Image() *image.RGBA {
 }
 
 func (l *Layer) Flush(r image.Rectangle) {
-	if l.l == nil {
+	if l.lst == nil {
 		panic(errors.New("layer: Flush: layer removed"))
 	}
-	l.l.Flush(r)
+	l.lst.Flush(r)
 }
