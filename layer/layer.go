@@ -41,7 +41,7 @@ func (l *List) Push() *Layer {
 
 func (l *List) Flush(r image.Rectangle) {
 	if l.dst == nil {
-		panic(errors.New("layers: Flush: no destination"))
+		panic(errors.New("layer: Flush: no destination"))
 	}
 	draw.Draw(l.dst.Image(), r, image.Transparent, r.Min, draw.Src)
 	for e := l.layers.Back(); e != nil; e = e.Prev() {
