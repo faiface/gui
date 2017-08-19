@@ -52,7 +52,9 @@ func (l *List) Flush(r image.Rectangle) {
 }
 
 func (l *List) Happen(event string) bool {
-	l.Dispatch.Happen(event)
+	if l.Dispatch.Happen(event) {
+		return true
+	}
 	for e := l.layers.Front(); e != nil; e = e.Next() {
 		layer := e.Value.(*Layer)
 		if layer.Happen(event) {
