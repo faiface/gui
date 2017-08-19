@@ -148,6 +148,9 @@ func (w *Win) flush(r image.Rectangle) {
 
 	bounds := w.rgba.Bounds()
 	r = bounds.Intersect(r)
+	if r.Empty() {
+		return
+	}
 
 	tmp := image.NewRGBA(r)
 	draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
