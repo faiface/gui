@@ -3,31 +3,48 @@ package layout
 import (
 	"container/list"
 	"errors"
+	"fmt"
 	"image"
 	"image/draw"
 
 	"github.com/faiface/gui/event"
 )
 
-type ImageFlusher interface {
+type EventImageFlusher interface {
+	Event(pattern string, handler func(event string) bool)
 	Image() *image.RGBA
 	Flush(r image.Rectangle)
 }
 
 type LayerList struct {
 	event.Dispatch
-	dst    ImageFlusher
+	dst    EventImageFlusher
 	layers list.List
 }
 
-func (l *LayerList) Dst(dst ImageFlusher) {
-	l.dst = dst
-	for e := l.layers.Back(); e != nil; e = e.Prev() {
-		layer := e.Value.(*Layer)
-		rgba := image.NewRGBA(dst.Image().Bounds())
-		draw.Draw(rgba, layer.rgba.Bounds(), layer.rgba, layer.rgba.Bounds().Min, draw.Src)
-		layer.rgba = rgba
-	}
+func NewLayerList(dst EventImageFlusher) *LayerList {
+	l := &LayerList{dst: dst}
+
+	dst.Event("", l.Happen)
+
+	l.Event("resize", func(event string) bool {
+		var x1, y1, x2, y2 int
+		fmt.Sscanf(event, "%d/%d/%d/%d", &x1, &y1, &x2, &y2)
+
+		for e := l.layers.Back(); e != nil; e = e.Prev() {
+			layer := e.Value.(*Layer)
+			rgba := image.NewRGBA(dst.Image().Bounds())
+			draw.Draw(rgba, layer.rgba.Bounds(), layer.rgba, layer.rgba.Bounds().Min, draw.Src)
+			layer.rgba = rgba
+		}
+
+		return false
+	})
+
+	r := dst.Image().Bounds()
+	l.Happen(event.Sprint("resize", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y))
+
+	return l
 }
 
 func (l *LayerList) Push() *Layer {
