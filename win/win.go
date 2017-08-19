@@ -61,16 +61,16 @@ func New(opts ...Option) (*Win, error) {
 		return nil, err
 	}
 
-	events := make(chan string)
+	w.mainthreadEvents = make(chan string)
 	mainthread.Call(func() {
 		w.resize(o.width, o.height)
-		w.setUpEvents(events)
+		w.setUpMainthreadEvents()
 	})
 
 	go func() {
 		for {
 			select {
-			case event := <-events:
+			case event := <-w.mainthreadEvents:
 				w.Dispatch.Happen(event)
 			case <-w.closed:
 				return
@@ -114,9 +114,10 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 
 type Win struct {
 	event.Dispatch
-	w      *glfw.Window
-	rgba   *image.RGBA
-	closed chan struct{}
+	w                *glfw.Window
+	rgba             *image.RGBA
+	mainthreadEvents chan string
+	closed           chan struct{}
 }
 
 func (w *Win) Close() error {
@@ -130,7 +131,6 @@ func (w *Win) Image() *image.RGBA {
 var curWin *Win = nil
 
 func (w *Win) Flush(r image.Rectangle) {
-	w.Dispatch.Happen(mkEvent("wi", "flush", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y))
 	mainthread.Call(func() {
 		w.flush(r)
 	})
