@@ -5,6 +5,8 @@ import (
 	"errors"
 	"image"
 	"image/draw"
+
+	"github.com/faiface/gui/event"
 )
 
 type ImageFlusher interface {
@@ -13,6 +15,7 @@ type ImageFlusher interface {
 }
 
 type Layers struct {
+	event.Dispatch
 	dst    ImageFlusher
 	layers list.List
 }
@@ -48,7 +51,18 @@ func (l *Layers) Flush(r image.Rectangle) {
 	l.dst.Flush(r)
 }
 
+func (l *Layers) Happen(event string) bool {
+	for e := l.layers.Front(); e != nil; e = e.Next() {
+		layer := e.Value.(*Layer)
+		if layer.Happen(event) {
+			return true
+		}
+	}
+	return false
+}
+
 type Layer struct {
+	event.Dispatch
 	l    *Layers
 	e    *list.Element
 	rgba *image.RGBA
