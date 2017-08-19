@@ -1,9 +1,6 @@
 package win
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/faiface/gui/event"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
@@ -40,12 +37,7 @@ func (w *Win) setUpMainthreadEvents() {
 }
 
 func (w *Win) mainthreadEvent(a ...interface{}) {
-	s := make([]string, len(a))
-	for i := range s {
-		s[i] = fmt.Sprint(a[i])
-	}
-	event := strings.Join(s, event.Sep)
 	go func() {
-		w.mainthreadEvents <- event
+		w.mainthreadEvents <- event.Sprint(a...)
 	}()
 }
