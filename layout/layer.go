@@ -70,18 +70,6 @@ func (l *LayerList) Front(layer *Layer) {
 	l.layers.MoveToFront(layer.elm)
 }
 
-func (l *LayerList) Flush(r image.Rectangle) {
-	if l.dst == nil {
-		panic(errors.New("layer: Flush: no destination"))
-	}
-	draw.Draw(l.dst.Image(), r, image.Transparent, r.Min, draw.Src)
-	for e := l.layers.Back(); e != nil; e = e.Prev() {
-		layer := e.Value.(*Layer)
-		draw.Draw(l.dst.Image(), r, layer.rgba, r.Min, draw.Over)
-	}
-	l.dst.Flush(r)
-}
-
 func (l *LayerList) Happen(event string) bool {
 	if l.Dispatch.Happen(event) {
 		return true
@@ -93,6 +81,18 @@ func (l *LayerList) Happen(event string) bool {
 		}
 	}
 	return false
+}
+
+func (l *LayerList) flush(r image.Rectangle) {
+	if l.dst == nil {
+		panic(errors.New("layer: Flush: no destination"))
+	}
+	draw.Draw(l.dst.Image(), r, image.Transparent, r.Min, draw.Src)
+	for e := l.layers.Back(); e != nil; e = e.Prev() {
+		layer := e.Value.(*Layer)
+		draw.Draw(l.dst.Image(), r, layer.rgba, r.Min, draw.Over)
+	}
+	l.dst.Flush(r)
 }
 
 type Layer struct {
@@ -114,5 +114,5 @@ func (l *Layer) Flush(r image.Rectangle) {
 	if l.lst == nil {
 		panic(errors.New("layer: Flush: layer removed"))
 	}
-	l.lst.Flush(r)
+	l.lst.flush(r)
 }
