@@ -26,6 +26,20 @@ func Sscan(event string, a ...interface{}) {
 	}
 }
 
+func Matches(pattern, event string) bool {
+	p := strings.Split(pattern, Sep)
+	e := strings.Split(event, Sep)
+	if len(p) > len(e) {
+		return false
+	}
+	for i := range p {
+		if p[i] != e[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type Dispatch struct {
 	mu       sync.Mutex
 	handlers []func(event string) bool
