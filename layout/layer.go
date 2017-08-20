@@ -3,7 +3,6 @@ package layout
 import (
 	"container/list"
 	"errors"
-	"fmt"
 	"image"
 	"image/draw"
 
@@ -27,9 +26,9 @@ func NewLayerList(dst EventImageFlusher) *LayerList {
 
 	dst.Event("", l.Happen)
 
-	l.Event("resize", func(event string) bool {
+	l.Event("resize", func(evt string) bool {
 		var x1, y1, x2, y2 int
-		fmt.Sscanf(event, "%d/%d/%d/%d", &x1, &y1, &x2, &y2)
+		event.Sscan(evt, &x1, &y1, &x2, &y2)
 
 		for e := l.layers.Back(); e != nil; e = e.Prev() {
 			layer := e.Value.(*Layer)
