@@ -20,6 +20,12 @@ func Sprint(a ...interface{}) string {
 	return buf.String()
 }
 
+func Sscan(event string, a ...interface{}) {
+	for i, part := range strings.Split(event, Sep) {
+		fmt.Sscan(part, a[i])
+	}
+}
+
 type Dispatch struct {
 	mu       sync.Mutex
 	handlers []func(event string) bool
