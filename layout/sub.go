@@ -6,8 +6,8 @@ import (
 	"github.com/faiface/gui/event"
 )
 
-func Sub(eif EventImageFlusher, r image.Rectangle) EventImageFlusher {
-	s := &sub{
+func NewSub(eif EventImageFlusher, r image.Rectangle) *Sub {
+	s := &Sub{
 		eif: eif,
 	}
 	s.Event("resize", func(evt string) bool {
@@ -21,17 +21,17 @@ func Sub(eif EventImageFlusher, r image.Rectangle) EventImageFlusher {
 	return s
 }
 
-type sub struct {
+type Sub struct {
 	event.Dispatch
 	eif EventImageFlusher
 	sub *image.RGBA
 }
 
-func (s *sub) Image() *image.RGBA {
+func (s *Sub) Image() *image.RGBA {
 	return s.sub
 }
 
-func (s *sub) Flush(r image.Rectangle) {
+func (s *Sub) Flush(r image.Rectangle) {
 	r = s.sub.Bounds().Intersect(r)
 	s.eif.Flush(r)
 }
