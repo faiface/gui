@@ -46,7 +46,7 @@ func NewLayerList(dst EventImageFlusher) *LayerList {
 	return l
 }
 
-func (l *LayerList) Push() *Layer {
+func (l *LayerList) Add() *Layer {
 	layer := &Layer{
 		lst:  l,
 		rgba: image.NewRGBA(l.dst.Image().Bounds()),
@@ -83,7 +83,7 @@ func (l *LayerList) Happen(event string) bool {
 	return false
 }
 
-func (l *LayerList) flush(r image.Rectangle) {
+func (l *LayerList) Flush(r image.Rectangle) {
 	if l.dst == nil {
 		panic(errors.New("layer: Flush: no destination"))
 	}
@@ -114,5 +114,5 @@ func (l *Layer) Flush(r image.Rectangle) {
 	if l.lst == nil {
 		panic(errors.New("layer: Flush: layer removed"))
 	}
-	l.lst.flush(r)
+	l.lst.Flush(r)
 }
