@@ -69,12 +69,12 @@ func New(opts ...Option) (*Win, error) {
 	}
 
 	var (
-		cancelOpenGLThread  = make(chan chan struct{})
-		cancelEventDispatch = make(chan chan struct{})
-		cancelEventThread   = make(chan chan struct{})
+		cancelOpenGLThread  = make(chan chan<- struct{})
+		cancelEventDispatch = make(chan chan<- struct{})
+		cancelEventThread   = make(chan chan<- struct{})
 	)
 
-	w.cancels = []chan<- chan struct{}{
+	w.cancels = []chan<- chan<- struct{}{
 		cancelEventThread,
 		cancelEventDispatch,
 		cancelOpenGLThread,
@@ -125,7 +125,7 @@ type Win struct {
 		r       image.Rectangle
 		flushed chan<- struct{}
 	}
-	cancels []chan<- chan struct{}
+	cancels []chan<- chan<- struct{}
 }
 
 func (w *Win) Event(pattern string, handler func(evt string) bool) {
@@ -175,7 +175,7 @@ func (w *Win) resize(width, height int) {
 	w.Flush(bounds)
 }
 
-func eventDispatch(w *Win, cancel <-chan chan struct{}, events chan struct {
+func eventDispatch(w *Win, cancel <-chan chan<- struct{}, events chan struct {
 	event  string
 	result chan<- bool
 }) {
@@ -191,7 +191,7 @@ loop:
 	}
 }
 
-func eventThread(w *Win, cancel <-chan chan struct{}) {
+func eventThread(w *Win, cancel <-chan chan<- struct{}) {
 	var moX, moY int
 
 	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
@@ -233,7 +233,7 @@ loop:
 	}
 }
 
-func openGLThread(w *Win, cancel <-chan chan struct{}, flushes <-chan struct {
+func openGLThread(w *Win, cancel <-chan chan<- struct{}, flushes <-chan struct {
 	r       image.Rectangle
 	flushed chan<- struct{}
 }) {
