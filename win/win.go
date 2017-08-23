@@ -3,7 +3,7 @@ package win
 import (
 	"image"
 	"image/draw"
-	"time"
+	"runtime"
 
 	"github.com/faiface/gui/event"
 	"github.com/faiface/mainthread"
@@ -50,7 +50,14 @@ func New(opts ...Option) (*Win, error) {
 	}
 
 	w := &Win{
-		closed: make(chan struct{}),
+		events: make(chan struct {
+			event  string
+			result chan<- bool
+		}),
+		flushes: make(chan struct {
+			r       image.Rectangle
+			flushed chan<- struct{}
+		}),
 	}
 
 	var err error
@@ -61,35 +68,29 @@ func New(opts ...Option) (*Win, error) {
 		return nil, err
 	}
 
-	w.mainthreadEvents = make(chan string)
-	mainthread.Call(func() {
-		w.resize(o.width, o.height)
-		w.setUpMainthreadEvents()
+	var (
+		cancelOpenGLThread  = make(chan chan struct{})
+		cancelEventHandling = make(chan chan struct{})
+		cancelEventThread   = make(chan chan struct{})
+	)
+
+	w.cancels = []chan<- chan struct{}{
+		cancelEventThread,
+		cancelEventHandling,
+		cancelOpenGLThread,
+	}
+
+	go func() {
+		runtime.LockOSThread()
+		openGLThread(w, cancelOpenGLThread, w.flushes)
+	}()
+
+	w.resize(o.width, o.height)
+
+	go eventHandling(w, cancelEventHandling, w.events)
+	mainthread.CallNonBlock(func() {
+		eventThread(w, cancelEventThread)
 	})
-
-	go func() {
-		for {
-			select {
-			case event := <-w.mainthreadEvents:
-				w.Dispatch.Happen(event)
-			case <-w.closed:
-				return
-			}
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(time.Second / 120)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				mainthread.Call(glfw.PollEvents)
-			case <-w.closed:
-				return
-			}
-		}
-	}()
 
 	return w, nil
 }
@@ -113,74 +114,55 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 }
 
 type Win struct {
-	event.Dispatch
-	w                *glfw.Window
-	rgba             *image.RGBA
-	mainthreadEvents chan string
-	closed           chan struct{}
+	dispatch event.Dispatch
+	w        *glfw.Window
+	rgba     *image.RGBA
+	events   chan struct {
+		event  string
+		result chan<- bool
+	}
+	flushes chan struct {
+		r       image.Rectangle
+		flushed chan<- struct{}
+	}
+	cancels []chan<- chan struct{}
+}
+
+func (w *Win) Event(pattern string, handler func(evt string) bool) {
+	w.dispatch.Event(pattern, handler)
+}
+
+func (w *Win) Happen(evt string) bool {
+	result := make(chan bool)
+	w.events <- struct {
+		event  string
+		result chan<- bool
+	}{evt, result}
+	return <-result
 }
 
 func (w *Win) Close() error {
-	return mainthread.CallErr(w.close)
+	go func() {
+		for _, cancel := range w.cancels {
+			confirm := make(chan struct{})
+			cancel <- confirm
+			<-confirm
+		}
+	}()
+	return nil
 }
 
 func (w *Win) Image() *image.RGBA {
 	return w.rgba
 }
 
-var curWin *Win = nil
-
 func (w *Win) Flush(r image.Rectangle) {
-	mainthread.Call(func() {
-		w.flush(r)
-	})
-}
-
-func (w *Win) flush(r image.Rectangle) {
-	if curWin != w {
-		w.w.MakeContextCurrent()
-		err := gl.Init()
-		if err != nil {
-			return
-		}
-		curWin = w
-	}
-
-	bounds := w.rgba.Bounds()
-	r = bounds.Intersect(r)
-	if r.Empty() {
-		return
-	}
-
-	tmp := image.NewRGBA(r)
-	draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
-
-	gl.DrawBuffer(gl.FRONT)
-	gl.Viewport(
-		int32(bounds.Min.X),
-		int32(bounds.Min.Y),
-		int32(bounds.Dx()),
-		int32(bounds.Dy()),
-	)
-	gl.RasterPos2d(
-		-1+2*float64(r.Min.X)/float64(bounds.Dx()),
-		+1-2*float64(r.Min.Y)/float64(bounds.Dy()),
-	)
-	gl.PixelZoom(1, -1)
-	gl.DrawPixels(
-		int32(r.Dx()),
-		int32(r.Dy()),
-		gl.RGBA,
-		gl.UNSIGNED_BYTE,
-		gl.Ptr(tmp.Pix),
-	)
-	gl.Flush()
-}
-
-func (w *Win) close() error {
-	close(w.closed)
-	w.w.Destroy()
-	return nil
+	flushed := make(chan struct{})
+	w.flushes <- struct {
+		r       image.Rectangle
+		flushed chan<- struct{}
+	}{r, flushed}
+	<-flushed
 }
 
 func (w *Win) resize(width, height int) {
@@ -190,5 +172,115 @@ func (w *Win) resize(width, height int) {
 		draw.Draw(rgba, w.rgba.Bounds(), w.rgba, w.rgba.Bounds().Min, draw.Src)
 	}
 	w.rgba = rgba
-	w.flush(bounds)
+	w.Flush(bounds)
+}
+
+func eventHandling(w *Win, cancel <-chan chan struct{}, events chan struct {
+	event  string
+	result chan<- bool
+}) {
+loop:
+	for {
+		select {
+		case evt := <-events:
+			evt.result <- w.dispatch.Happen(evt.event)
+		case confirm := <-cancel:
+			close(confirm)
+			break loop
+		}
+	}
+}
+
+func eventThread(w *Win, cancel <-chan chan struct{}) {
+	var moX, moY int
+
+	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
+		switch action {
+		case glfw.Press:
+			w.Happen(event.Sprint("mo", "down", moX, moY))
+		case glfw.Release:
+			w.Happen(event.Sprint("mo", "up", moX, moY))
+		}
+	})
+
+	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
+		moX, moY = int(x), int(y)
+		w.Happen(event.Sprint("mo", "move", moX, moY))
+	})
+
+	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
+		w.Happen(event.Sprint("kb", "type", r))
+	})
+
+	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
+		w.resize(width, height)
+		w.Happen(event.Sprint("resize", 0, 0, width, height))
+	})
+
+	w.w.SetCloseCallback(func(_ *glfw.Window) {
+		w.Happen(event.Sprint("wi", "close"))
+	})
+
+loop:
+	for {
+		select {
+		default:
+			glfw.WaitEvents()
+		case confirm := <-cancel:
+			close(confirm)
+			break loop
+		}
+	}
+}
+
+func openGLThread(w *Win, cancel <-chan chan struct{}, flushes <-chan struct {
+	r       image.Rectangle
+	flushed chan<- struct{}
+}) {
+	w.w.MakeContextCurrent()
+	gl.Init()
+
+loop:
+	for {
+		select {
+		case flush := <-w.flushes:
+			r := flush.r
+
+			bounds := w.rgba.Bounds()
+			r = bounds.Intersect(r)
+			if r.Empty() {
+				return
+			}
+
+			tmp := image.NewRGBA(r)
+			draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
+
+			gl.DrawBuffer(gl.FRONT)
+			gl.Viewport(
+				int32(bounds.Min.X),
+				int32(bounds.Min.Y),
+				int32(bounds.Dx()),
+				int32(bounds.Dy()),
+			)
+			gl.RasterPos2d(
+				-1+2*float64(r.Min.X)/float64(bounds.Dx()),
+				+1-2*float64(r.Min.Y)/float64(bounds.Dy()),
+			)
+			gl.PixelZoom(1, -1)
+			gl.DrawPixels(
+				int32(r.Dx()),
+				int32(r.Dy()),
+				gl.RGBA,
+				gl.UNSIGNED_BYTE,
+				gl.Ptr(tmp.Pix),
+			)
+			gl.Flush()
+
+			close(flush.flushed)
+		case confirm := <-cancel:
+			w.w.Destroy()
+			close(confirm)
+			break loop
+		}
+	}
 }
