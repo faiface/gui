@@ -70,13 +70,13 @@ func New(opts ...Option) (*Win, error) {
 
 	var (
 		cancelOpenGLThread  = make(chan chan struct{})
-		cancelEventHandling = make(chan chan struct{})
+		cancelEventDispatch = make(chan chan struct{})
 		cancelEventThread   = make(chan chan struct{})
 	)
 
 	w.cancels = []chan<- chan struct{}{
 		cancelEventThread,
-		cancelEventHandling,
+		cancelEventDispatch,
 		cancelOpenGLThread,
 	}
 
@@ -87,7 +87,7 @@ func New(opts ...Option) (*Win, error) {
 
 	w.resize(o.width, o.height)
 
-	go eventHandling(w, cancelEventHandling, w.events)
+	go eventDispatch(w, cancelEventDispatch, w.events)
 	mainthread.CallNonBlock(func() {
 		eventThread(w, cancelEventThread)
 	})
@@ -175,7 +175,7 @@ func (w *Win) resize(width, height int) {
 	w.Flush(bounds)
 }
 
-func eventHandling(w *Win, cancel <-chan chan struct{}, events chan struct {
+func eventDispatch(w *Win, cancel <-chan chan struct{}, events chan struct {
 	event  string
 	result chan<- bool
 }) {
