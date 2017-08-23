@@ -17,7 +17,7 @@ func (b *Box) Image() *image.RGBA {
 }
 
 func (b *Box) Flush(r image.Rectangle) {
-	r = r.Intersect(b.dst.Image().Bounds())
+	r = r.Intersect(b.sub.Bounds())
 	b.dst.Flush(r)
 }
 
@@ -119,11 +119,12 @@ func NewSplit(dst EventImageFlusher, splitter Splitter) *Split {
 		dst:      dst,
 		splitter: splitter,
 	}
-	dst.Event("", s.Happen)
-	s.Event("resize", func(evt string) bool {
+	s.Event("resize", func(string) bool {
 		s.Split()
+		s.dst.Flush(s.dst.Image().Bounds())
 		return true
 	})
+	dst.Event("", s.Happen)
 	return s
 }
 
@@ -144,6 +145,7 @@ func (s *Split) Add() *Box {
 		dst: s.dst,
 	}
 	s.boxes = append(s.boxes, box)
+	s.Split()
 	return box
 }
 
@@ -154,8 +156,8 @@ func (s *Split) Split() {
 		subR := s.splitter(r, i, n)
 		s.boxes[i].sub = s.dst.Image().SubImage(subR).(*image.RGBA)
 	}
-	for i := range s.boxes {
-		subR := s.boxes[i].sub.Bounds()
-		s.boxes[i].Happen(event.Sprint("resize", subR.Min.X, subR.Min.Y, subR.Max.X, subR.Max.Y))
+	for _, box := range s.boxes {
+		subR := box.sub.Bounds()
+		box.Happen(event.Sprint("resize", subR.Min.X, subR.Min.Y, subR.Max.X, subR.Max.Y))
 	}
 }
