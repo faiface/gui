@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/draw"
 	"runtime"
+	"time"
 
 	"github.com/faiface/gui/event"
 	"github.com/faiface/mainthread"
@@ -116,7 +117,8 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 type Win struct {
 	dispatch event.Dispatch
 	w        *glfw.Window
-	rgba     *image.RGBA
+	front    *image.RGBA
+	back     *image.RGBA
 	events   chan struct {
 		event  string
 		result chan<- bool
@@ -153,7 +155,7 @@ func (w *Win) Close() error {
 }
 
 func (w *Win) Image() *image.RGBA {
-	return w.rgba
+	return w.front
 }
 
 func (w *Win) Flush(r image.Rectangle) {
@@ -167,11 +169,16 @@ func (w *Win) Flush(r image.Rectangle) {
 
 func (w *Win) resize(width, height int) {
 	bounds := image.Rect(0, 0, width, height)
-	rgba := image.NewRGBA(bounds)
-	if w.rgba != nil {
-		draw.Draw(rgba, w.rgba.Bounds(), w.rgba, w.rgba.Bounds().Min, draw.Src)
+	front := image.NewRGBA(bounds)
+	if w.front != nil {
+		draw.Draw(front, w.front.Bounds(), w.front, w.front.Bounds().Min, draw.Src)
 	}
-	w.rgba = rgba
+	w.front = front
+	back := image.NewRGBA(bounds)
+	if w.back != nil {
+		draw.Draw(back, w.back.Bounds(), w.back, w.back.Bounds().Min, draw.Src)
+	}
+	w.back = back
 	w.Flush(bounds)
 }
 
@@ -240,20 +247,31 @@ func openGLThread(w *Win, cancel <-chan chan<- struct{}, flushes <-chan struct {
 	w.w.MakeContextCurrent()
 	gl.Init()
 
+	var (
+		openGLFlushR = image.Rectangle{}
+		openGLFlush  = time.NewTicker(time.Second / 30)
+	)
+	defer openGLFlush.Stop()
+
 loop:
 	for {
 		select {
 		case flush := <-w.flushes:
-			r := flush.r
+			draw.Draw(w.back, flush.r, w.front, flush.r.Min, draw.Src)
+			openGLFlushR = openGLFlushR.Union(flush.r)
+			close(flush.flushed)
+		case <-openGLFlush.C:
+			r := openGLFlushR
 
-			bounds := w.rgba.Bounds()
-			r = bounds.Intersect(r)
+			back := w.back
+			bounds := back.Bounds()
+			r = r.Intersect(bounds)
 			if r.Empty() {
 				return
 			}
 
 			tmp := image.NewRGBA(r)
-			draw.Draw(tmp, r, w.rgba, r.Min, draw.Src)
+			draw.Draw(tmp, r, back, r.Min, draw.Src)
 
 			gl.DrawBuffer(gl.FRONT)
 			gl.Viewport(
@@ -275,8 +293,6 @@ loop:
 				gl.Ptr(tmp.Pix),
 			)
 			gl.Flush()
-
-			close(flush.flushed)
 		case confirm := <-cancel:
 			w.w.Destroy()
 			close(confirm)
