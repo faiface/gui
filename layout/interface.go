@@ -8,33 +8,23 @@ import (
 
 type EventDrawer interface {
 	Event() <-chan EventConsume
-	Draw() chan<- ImageFlush
+	Draw(func(draw.Image) image.Rectangle)
 }
 
 type EventConsume struct {
-	Event   string
+	Event
 	Consume chan<- bool
+}
+
+type Event string
+
+func (e Event) Matches(format string, a ...interface{}) bool {
+	_, err := fmt.Sscanf(string(e), format, a...)
+	return err == nil
 }
 
 func SendEvent(ch chan<- EventConsume, format string, a ...interface{}) (consume <-chan bool) {
 	cons := make(chan bool)
-	ch <- EventConsume{fmt.Sprintf(format, a...), cons}
+	ch <- EventConsume{Event(fmt.Sprintf(format, a...)), cons}
 	return cons
-}
-
-func (ec EventConsume) Matches(format string, a ...interface{}) bool {
-	_, err := fmt.Sscanf(ec.Event, format, a...)
-	return err == nil
-}
-
-type ImageFlush struct {
-	Image chan<- draw.Image
-	Flush <-chan image.Rectangle
-}
-
-func SendDraw(ch chan<- ImageFlush) (img <-chan draw.Image, flush chan<- image.Rectangle) {
-	imgC := make(chan draw.Image)
-	flushC := make(chan image.Rectangle)
-	ch <- ImageFlush{imgC, flushC}
-	return imgC, flushC
 }

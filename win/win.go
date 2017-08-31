@@ -52,7 +52,7 @@ func New(opts ...Option) (*Win, error) {
 
 	w := &Win{
 		event:   make(chan layout.EventConsume),
-		draw:    make(chan layout.ImageFlush),
+		draw:    make(chan func(draw.Image) image.Rectangle),
 		newSize: make(chan image.Rectangle),
 		finish:  make(chan struct{}),
 	}
@@ -98,7 +98,7 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 
 type Win struct {
 	event chan layout.EventConsume
-	draw  chan layout.ImageFlush
+	draw  chan func(draw.Image) image.Rectangle
 
 	newSize chan image.Rectangle
 	finish  chan struct{}
@@ -120,8 +120,8 @@ func (w *Win) Event() <-chan layout.EventConsume {
 	return w.event
 }
 
-func (w *Win) Draw() chan<- layout.ImageFlush {
-	return w.draw
+func (w *Win) Draw(d func(draw.Image) image.Rectangle) {
+	w.draw <- d
 }
 
 func (w *Win) eventThread() {
@@ -190,9 +190,8 @@ func (w *Win) openGLThread() {
 			w.img = img
 			openGLFlushR = r
 
-		case imfl := <-w.draw:
-			imfl.Image <- w.img
-			r := <-imfl.Flush
+		case d := <-w.draw:
+			r := d(w.img)
 			openGLFlushR = openGLFlushR.Union(r)
 
 		case <-openGLFlush.C:
