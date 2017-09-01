@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/draw"
 	"runtime"
-	"time"
 
 	"github.com/faiface/gui/layout"
 	"github.com/faiface/mainthread"
@@ -51,7 +50,7 @@ func New(opts ...Option) (*Win, error) {
 	}
 
 	w := &Win{
-		event:   make(chan layout.EventConsume),
+		event:   make(chan layout.Event),
 		draw:    make(chan func(draw.Image) image.Rectangle),
 		newSize: make(chan image.Rectangle),
 		finish:  make(chan struct{}),
@@ -97,7 +96,7 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 }
 
 type Win struct {
-	event chan layout.EventConsume
+	event chan layout.Event
 	draw  chan func(draw.Image) image.Rectangle
 
 	newSize chan image.Rectangle
@@ -107,21 +106,12 @@ type Win struct {
 	img *image.RGBA
 }
 
-func (w *Win) Cancel() {
-	go func() {
-		<-layout.SendEvent(w.event, "cancel")
-		<-layout.SendEvent(w.event, "return")
-		close(w.event)
-		close(w.finish)
-	}()
-}
-
-func (w *Win) Event() <-chan layout.EventConsume {
+func (w *Win) Event() <-chan layout.Event {
 	return w.event
 }
 
-func (w *Win) Draw(d func(draw.Image) image.Rectangle) {
-	w.draw <- d
+func (w *Win) Draw() chan<- func(draw.Image) image.Rectangle {
+	return w.draw
 }
 
 func (w *Win) eventThread() {
@@ -130,37 +120,38 @@ func (w *Win) eventThread() {
 	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
 		switch action {
 		case glfw.Press:
-			<-layout.SendEvent(w.event, "mo/down/%d/%d", moX, moY)
+			w.event <- layout.Eventf("mo/down/%d/%d", moX, moY)
 		case glfw.Release:
-			<-layout.SendEvent(w.event, "mo/up/%d/%d", moX, moY)
+			w.event <- layout.Eventf("mo/up/%d/%d", moX, moY)
 		}
 	})
 
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
-		<-layout.SendEvent(w.event, "mo/move/%d/%d", moX, moY)
+		w.event <- layout.Eventf("mo/move/%d/%d", moX, moY)
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
-		<-layout.SendEvent(w.event, "kb/type/%d", r)
+		w.event <- layout.Eventf("kb/type/%d", r)
 	})
 
 	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
 		r := image.Rect(0, 0, width, height)
 		w.newSize <- r
-		<-layout.SendEvent(w.event, "resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
+		w.event <- layout.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 	})
 
 	w.w.SetCloseCallback(func(_ *glfw.Window) {
-		<-layout.SendEvent(w.event, "wi/close")
+		w.event <- layout.Eventf("wi/close")
 	})
 
 	r := w.img.Bounds()
-	<-layout.SendEvent(w.event, "resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
+	w.event <- layout.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 
 	for {
 		select {
 		case <-w.finish:
+			close(w.event)
 			w.w.Destroy()
 			return
 		default:
@@ -173,60 +164,53 @@ func (w *Win) openGLThread() {
 	w.w.MakeContextCurrent()
 	gl.Init()
 
-	var (
-		openGLFlushR = image.Rectangle{}
-		openGLFlush  = time.NewTicker(time.Second / 30)
-	)
-	defer openGLFlush.Stop()
-
 	for {
 		select {
-		case <-w.finish:
-			return
-
 		case r := <-w.newSize:
 			img := image.NewRGBA(r)
 			draw.Draw(img, w.img.Bounds(), w.img, w.img.Bounds().Min, draw.Src)
 			w.img = img
-			openGLFlushR = r
+			w.openGLFlush(r)
 
-		case d := <-w.draw:
-			r := d(w.img)
-			openGLFlushR = openGLFlushR.Union(r)
-
-		case <-openGLFlush.C:
-			r := openGLFlushR
-			openGLFlushR = image.Rectangle{}
-
-			bounds := w.img.Bounds()
-			r = r.Intersect(bounds)
-			if r.Empty() {
-				continue
+		case d, ok := <-w.draw:
+			if !ok {
+				close(w.finish)
+				return
 			}
-
-			tmp := image.NewRGBA(r)
-			draw.Draw(tmp, r, w.img, r.Min, draw.Src)
-
-			gl.DrawBuffer(gl.FRONT)
-			gl.Viewport(
-				int32(bounds.Min.X),
-				int32(bounds.Min.Y),
-				int32(bounds.Dx()),
-				int32(bounds.Dy()),
-			)
-			gl.RasterPos2d(
-				-1+2*float64(r.Min.X)/float64(bounds.Dx()),
-				+1-2*float64(r.Min.Y)/float64(bounds.Dy()),
-			)
-			gl.PixelZoom(1, -1)
-			gl.DrawPixels(
-				int32(r.Dx()),
-				int32(r.Dy()),
-				gl.RGBA,
-				gl.UNSIGNED_BYTE,
-				gl.Ptr(tmp.Pix),
-			)
-			gl.Flush()
+			r := d(w.img)
+			w.openGLFlush(r)
 		}
 	}
+}
+
+func (w *Win) openGLFlush(r image.Rectangle) {
+	bounds := w.img.Bounds()
+	r = r.Intersect(bounds)
+	if r.Empty() {
+		return
+	}
+
+	tmp := image.NewRGBA(r)
+	draw.Draw(tmp, r, w.img, r.Min, draw.Src)
+
+	gl.DrawBuffer(gl.FRONT)
+	gl.Viewport(
+		int32(bounds.Min.X),
+		int32(bounds.Min.Y),
+		int32(bounds.Dx()),
+		int32(bounds.Dy()),
+	)
+	gl.RasterPos2d(
+		-1+2*float64(r.Min.X)/float64(bounds.Dx()),
+		+1-2*float64(r.Min.Y)/float64(bounds.Dy()),
+	)
+	gl.PixelZoom(1, -1)
+	gl.DrawPixels(
+		int32(r.Dx()),
+		int32(r.Dy()),
+		gl.RGBA,
+		gl.UNSIGNED_BYTE,
+		gl.Ptr(tmp.Pix),
+	)
+	gl.Flush()
 }
