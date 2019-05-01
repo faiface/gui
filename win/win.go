@@ -4,8 +4,10 @@ import (
 	"image"
 	"image/draw"
 	"runtime"
+	"time"
+	"unsafe"
 
-	"github.com/faiface/gui/layout"
+	"github.com/faiface/gui"
 	"github.com/faiface/mainthread"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
@@ -49,11 +51,14 @@ func New(opts ...Option) (*Win, error) {
 		opt(&o)
 	}
 
+	eventsOut, eventsIn := gui.MakeEventsChan()
+
 	w := &Win{
-		event:   make(chan layout.Event),
-		draw:    make(chan func(draw.Image) image.Rectangle),
-		newSize: make(chan image.Rectangle),
-		finish:  make(chan struct{}),
+		eventsOut: eventsOut,
+		eventsIn:  eventsIn,
+		draw:      make(chan func(draw.Image) image.Rectangle),
+		newSize:   make(chan image.Rectangle),
+		finish:    make(chan struct{}),
 	}
 
 	var err error
@@ -96,8 +101,9 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 }
 
 type Win struct {
-	event chan layout.Event
-	draw  chan func(draw.Image) image.Rectangle
+	eventsOut <-chan gui.Event
+	eventsIn  chan<- gui.Event
+	draw      chan func(draw.Image) image.Rectangle
 
 	newSize chan image.Rectangle
 	finish  chan struct{}
@@ -106,12 +112,8 @@ type Win struct {
 	img *image.RGBA
 }
 
-func (w *Win) Event() <-chan layout.Event {
-	return w.event
-}
-
-func (w *Win) Draw() chan<- func(draw.Image) image.Rectangle {
-	return w.draw
+func (w *Win) Env() gui.Env {
+	return gui.Env{Events: w.eventsOut, Draw: w.draw}
 }
 
 func (w *Win) eventThread() {
@@ -120,38 +122,38 @@ func (w *Win) eventThread() {
 	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
 		switch action {
 		case glfw.Press:
-			w.event <- layout.Eventf("mo/down/%d/%d", moX, moY)
+			w.eventsIn <- gui.Eventf("mo/down/%d/%d", moX, moY)
 		case glfw.Release:
-			w.event <- layout.Eventf("mo/up/%d/%d", moX, moY)
+			w.eventsIn <- gui.Eventf("mo/up/%d/%d", moX, moY)
 		}
 	})
 
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
-		w.event <- layout.Eventf("mo/move/%d/%d", moX, moY)
+		w.eventsIn <- gui.Eventf("mo/move/%d/%d", moX, moY)
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
-		w.event <- layout.Eventf("kb/type/%d", r)
+		w.eventsIn <- gui.Eventf("kb/type/%d", r)
 	})
 
 	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
 		r := image.Rect(0, 0, width, height)
 		w.newSize <- r
-		w.event <- layout.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
+		w.eventsIn <- gui.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 	})
 
 	w.w.SetCloseCallback(func(_ *glfw.Window) {
-		w.event <- layout.Eventf("wi/close")
+		w.eventsIn <- gui.Eventf("wi/close")
 	})
 
 	r := w.img.Bounds()
-	w.event <- layout.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
+	w.eventsIn <- gui.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 
 	for {
 		select {
 		case <-w.finish:
-			close(w.event)
+			close(w.eventsIn)
 			w.w.Destroy()
 			return
 		default:
@@ -164,13 +166,18 @@ func (w *Win) openGLThread() {
 	w.w.MakeContextCurrent()
 	gl.Init()
 
+	w.openGLFlush(w.img.Bounds())
+
+loop:
 	for {
+		var totalR image.Rectangle
+
 		select {
 		case r := <-w.newSize:
 			img := image.NewRGBA(r)
 			draw.Draw(img, w.img.Bounds(), w.img, w.img.Bounds().Min, draw.Src)
 			w.img = img
-			w.openGLFlush(r)
+			totalR = totalR.Union(r)
 
 		case d, ok := <-w.draw:
 			if !ok {
@@ -178,7 +185,30 @@ func (w *Win) openGLThread() {
 				return
 			}
 			r := d(w.img)
-			w.openGLFlush(r)
+			totalR = totalR.Union(r)
+		}
+
+		for {
+			select {
+			case <-time.After(time.Second / 960):
+				w.openGLFlush(totalR)
+				totalR = image.ZR
+				continue loop
+
+			case r := <-w.newSize:
+				img := image.NewRGBA(r)
+				draw.Draw(img, w.img.Bounds(), w.img, w.img.Bounds().Min, draw.Src)
+				w.img = img
+				totalR = totalR.Union(r)
+
+			case d, ok := <-w.draw:
+				if !ok {
+					close(w.finish)
+					return
+				}
+				r := d(w.img)
+				totalR = totalR.Union(r)
+			}
 		}
 	}
 }
@@ -210,7 +240,7 @@ func (w *Win) openGLFlush(r image.Rectangle) {
 		int32(r.Dy()),
 		gl.RGBA,
 		gl.UNSIGNED_BYTE,
-		gl.Ptr(tmp.Pix),
+		unsafe.Pointer(&tmp.Pix[0]),
 	)
 	gl.Flush()
 }
