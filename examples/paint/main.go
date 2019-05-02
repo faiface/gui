@@ -36,7 +36,7 @@ func Canvas(env gui.Env, pick <-chan color.Color, r image.Rectangle) {
 	dc := gg.NewContextForRGBA(canvas)
 
 	env.Draw() <- func(drw draw.Image) image.Rectangle {
-		draw.Draw(drw, r, canvas, r.Min, draw.Src)
+		draw.Draw(drw, r, canvas, image.ZP, draw.Src)
 		return r
 	}
 
