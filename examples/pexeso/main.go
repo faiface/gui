@@ -65,7 +65,7 @@ func Tile(env gui.Env, pair chan PairMsg, r image.Rectangle, clr color.Color) {
 		}
 	}
 
-	env.Draw() <- redraw(0.0)
+	env.Draw() <- redraw(1.0)
 
 	for event := range env.Events() {
 		var x, y int
