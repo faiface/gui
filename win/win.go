@@ -112,9 +112,8 @@ type Win struct {
 	img *image.RGBA
 }
 
-func (w *Win) Env() gui.Env {
-	return gui.Env{Events: w.eventsOut, Draw: w.draw}
-}
+func (w *Win) Events() <-chan gui.Event                      { return w.eventsOut }
+func (w *Win) Draw() chan<- func(draw.Image) image.Rectangle { return w.draw }
 
 func (w *Win) eventThread() {
 	var moX, moY int

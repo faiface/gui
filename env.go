@@ -5,7 +5,7 @@ import (
 	"image/draw"
 )
 
-type Env struct {
-	Events <-chan Event
-	Draw   chan<- func(draw.Image) image.Rectangle
+type Env interface {
+	Events() <-chan Event
+	Draw() chan<- func(draw.Image) image.Rectangle
 }

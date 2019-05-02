@@ -19,13 +19,13 @@ func NewMux(env Env) (mux *Mux, master Env) {
 
 	go func() {
 		for d := range drawChan {
-			env.Draw <- d
+			env.Draw() <- d
 		}
-		close(env.Draw)
+		close(env.Draw())
 	}()
 
 	go func() {
-		for e := range env.Events {
+		for e := range env.Events() {
 			mux.mu.Lock()
 			for _, eventsIn := range mux.eventsIns {
 				eventsIn <- e
@@ -46,10 +46,18 @@ func (mux *Mux) MakeEnv() Env {
 	return mux.makeEnv(false)
 }
 
+type muxEnv struct {
+	events <-chan Event
+	draw   chan<- func(draw.Image) image.Rectangle
+}
+
+func (m *muxEnv) Events() <-chan Event                          { return m.events }
+func (m *muxEnv) Draw() chan<- func(draw.Image) image.Rectangle { return m.draw }
+
 func (mux *Mux) makeEnv(master bool) Env {
 	eventsOut, eventsIn := MakeEventsChan()
 	drawChan := make(chan func(draw.Image) image.Rectangle)
-	env := Env{eventsOut, drawChan}
+	env := &muxEnv{eventsOut, drawChan}
 
 	mux.mu.Lock()
 	mux.eventsIns = append(mux.eventsIns, eventsIn)
