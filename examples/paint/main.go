@@ -121,7 +121,6 @@ func run() {
 		switch {
 		case event.Matches("wi/close"):
 			close(env.Draw())
-			return
 		}
 	}
 }
