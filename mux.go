@@ -64,9 +64,30 @@ func (mux *Mux) makeEnv(master bool) Env {
 	mux.mu.Unlock()
 
 	go func() {
-		for d := range drawChan {
-			mux.draw <- d
-		}
+		func() {
+			// When the master Env gets its Draw() channel closed, it closes all the Events()
+			// channels of all the children Envs, and it also closes the internal draw channel
+			// of the Mux. Otherwise, closing the Draw() channel of the master Env wouldn't
+			// close the Env the Mux is muxing. However, some child Envs of the Mux may still
+			// send some drawing commmands before they realize that their Events() channel got
+			// closed.
+			//
+			// That is perfectly fine if their drawing commands simply get ignored. This down here
+			// is a little hacky, but (I hope) perfectly fine solution to the problem.
+			//
+			// When the internal draw channel of the Mux gets closed, the line marked with ! will
+			// cause panic. We recover this panic, then we receive, but ignore all furhter draw
+			// commands, correctly draining the Env until it closes itself.
+			defer func() {
+				if recover() != nil {
+					for range drawChan {
+					}
+				}
+			}()
+			for d := range drawChan {
+				mux.draw <- d // !
+			}
+		}()
 		if master {
 			mux.mu.Lock()
 			for _, eventsIn := range mux.eventsIns {
