@@ -13,6 +13,7 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
+// Option is a functional option to the window constructor New.
 type Option func(*options)
 
 type options struct {
@@ -21,12 +22,14 @@ type options struct {
 	resizable     bool
 }
 
+// Title option sets the title (caption) of the window.
 func Title(title string) Option {
 	return func(o *options) {
 		o.title = title
 	}
 }
 
+// Size option sets the width and height of the window.
 func Size(width, height int) Option {
 	return func(o *options) {
 		o.width = width
@@ -34,12 +37,16 @@ func Size(width, height int) Option {
 	}
 }
 
+// Resizable option makes the window resizable by the user.
 func Resizable() Option {
 	return func(o *options) {
 		o.resizable = true
 	}
 }
 
+// New creates a new window with all the supplied options.
+//
+// The default title is empty and the default size is 640x480.
 func New(opts ...Option) (*Win, error) {
 	o := options{
 		title:     "",
@@ -100,6 +107,9 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 	return w, nil
 }
 
+// Win is an Env that handles an actual graphical window.
+//
+// It receives its events from the OS and it draws to the surface of the window.
 type Win struct {
 	eventsOut <-chan gui.Event
 	eventsIn  chan<- gui.Event
@@ -112,7 +122,10 @@ type Win struct {
 	img *image.RGBA
 }
 
-func (w *Win) Events() <-chan gui.Event                      { return w.eventsOut }
+// Events returns the events channel of the window.
+func (w *Win) Events() <-chan gui.Event { return w.eventsOut }
+
+// Draw returns the draw channel of the window.
 func (w *Win) Draw() chan<- func(draw.Image) image.Rectangle { return w.draw }
 
 func (w *Win) eventThread() {
@@ -130,6 +143,60 @@ func (w *Win) eventThread() {
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
 		w.eventsIn <- gui.Eventf("mo/move/%d/%d", moX, moY)
+	})
+
+	w.w.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, _ glfw.ModifierKey) {
+		k := -1
+
+		switch key {
+		case glfw.KeyLeft:
+			k = gui.KeyLeft
+		case glfw.KeyRight:
+			k = gui.KeyRight
+		case glfw.KeyUp:
+			k = gui.KeyUp
+		case glfw.KeyDown:
+			k = gui.KeyDown
+		case glfw.KeyEscape:
+			k = gui.KeyEscape
+		case glfw.KeySpace:
+			k = gui.KeySpace
+		case glfw.KeyBackspace:
+			k = gui.KeyBackspace
+		case glfw.KeyDelete:
+			k = gui.KeyDelete
+		case glfw.KeyEnter:
+			k = gui.KeyEnter
+		case glfw.KeyTab:
+			k = gui.KeyTab
+		case glfw.KeyHome:
+			k = gui.KeyHome
+		case glfw.KeyEnd:
+			k = gui.KeyEnd
+		case glfw.KeyPageUp:
+			k = gui.KeyPageUp
+		case glfw.KeyPageDown:
+			k = gui.KeyPageDown
+		case glfw.KeyLeftShift, glfw.KeyRightShift:
+			k = gui.KeyShift
+		case glfw.KeyLeftControl, glfw.KeyRightControl:
+			k = gui.KeyCtrl
+		case glfw.KeyLeftAlt, glfw.KeyRightAlt:
+			k = gui.KeyAlt
+		}
+
+		if k == -1 {
+			return
+		}
+
+		switch action {
+		case glfw.Press:
+			w.eventsIn <- gui.Eventf("kb/down/%d", k)
+		case glfw.Release:
+			w.eventsIn <- gui.Eventf("kb/up/%d", k)
+		case glfw.Repeat:
+			w.eventsIn <- gui.Eventf("kb/repeat/%d", k)
+		}
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
