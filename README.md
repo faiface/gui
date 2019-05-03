@@ -1,4 +1,4 @@
-# faiface/gui
+# faiface/gui [![GoDoc](https://godoc.org/github.com/faiface/gui?status.svg)](https://godoc.org/github.com/faiface/gui)
 
 Super minimal, rock-solid package for concurrent GUI in Go.
 
