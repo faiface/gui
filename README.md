@@ -45,6 +45,8 @@ Closing the `Draw()` channel destroys the environment. When destroyed (either by
 
 As you can see, a draw command is a function that draws something onto a [`draw.Image`](https://golang.org/pkg/image/draw/#Image) and returns a rectangle telling which part got changed.
 
+If you're not familiar with the `"image"` and the `"image/draw"` packages, go read [this short entry in the Go blog](https://blog.golang.org/go-imagedraw-package).
+
 ![Draw](images/draw.png)
 
 Yes, `faiface/gui` uses CPU for drawing. You won't make AAA games with it, but the performance is enough for most GUI apps. The benefits are outstanding, though:
