@@ -30,7 +30,9 @@ Why the hell has no one made a concurrent GUI in Go yet? I have no idea. Go is a
 
 **So, how does this work?**
 
-There's [`Env`](https://godoc.org/github.com/faiface/gui#Env0), short for _environment_:
+The main idea is that different components of the GUI (buttons, text fields, ...) run concurrently and communicate using channels. Furthermore, they receive events from an object called _environment_ and can draw by sending draw commands to it.
+
+Here's [`Env`](https://godoc.org/github.com/faiface/gui#Env0), short for environment:
 
 ```go
 type Env interface {
