@@ -23,9 +23,6 @@ import "fmt"
 //       // window closed
 //   case event.Matches("mo/move/%d/%d", &x, &y):
 //       // mouse moved to (x, y)
-//   case event.Matches("mo/down/%d/%d", &x, &y):
-//       // mouse pressed on (x, y)
-//   case event.Matches("mo/up/%d/%d", &x, &y):
 //       // mouse released on (x, y)
 //   case event.Matches("kb/type/%d", &r):
 //       // rune r typed on the keyboard (encoded as a number in the event string)

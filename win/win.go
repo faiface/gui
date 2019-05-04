@@ -110,6 +110,27 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 // Win is an Env that handles an actual graphical window.
 //
 // It receives its events from the OS and it draws to the surface of the window.
+//
+// Here are all kinds of events that a window can produce, along with descriptions.
+// Things enclosed in <> are values that are filled in.
+//
+//   resize/<w>/<h>            Window resized to w x h.
+//   wi/close                  Window close button pressed.
+//   mo/move/<x>/<y>           Mouse moved to (x, y).
+//   mo/down/<x>/<y>/<button>  A mouse button pressed on (x, y).
+//   mo/up/<x>/<y>/<button>    A mouse button released on (x, y).
+//   kb/type/<code>            A unicode character typed on the keyboard.
+//   kb/down/<key>             A key on the keyboard pressed.
+//   kb/up/<key>               A key on the keyboard released.
+//   kb/repeat/<key>           A key on the keyboard repeated (happens when held).
+//
+// <w>, <h>, <x>, <y>, and <code> are numbers (%d).
+// <button> is one of (without quotes):
+//   "left", "right", "middle"
+// <key> is one of (without quotes):
+//   "left", "right", "up", "down", "escape", "space", "backspace", "delete", "enter",
+//   "tab", "home", "end", "pageup", "pagedown", "shift", "shift", "ctrl", "ctrl", "alt",
+//   "alt"
 type Win struct {
 	eventsOut <-chan gui.Event
 	eventsIn  chan<- gui.Event
@@ -128,79 +149,73 @@ func (w *Win) Events() <-chan gui.Event { return w.eventsOut }
 // Draw returns the draw channel of the window.
 func (w *Win) Draw() chan<- func(draw.Image) image.Rectangle { return w.draw }
 
+var buttonNames = map[glfw.MouseButton]string{
+	glfw.MouseButtonLeft:   "left",
+	glfw.MouseButtonRight:  "right",
+	glfw.MouseButtonMiddle: "middle",
+}
+
+var keyNames = map[glfw.Key]string{
+	glfw.KeyLeft:         "left",
+	glfw.KeyRight:        "right",
+	glfw.KeyUp:           "up",
+	glfw.KeyDown:         "down",
+	glfw.KeyEscape:       "escape",
+	glfw.KeySpace:        "space",
+	glfw.KeyBackspace:    "backspace",
+	glfw.KeyDelete:       "delete",
+	glfw.KeyEnter:        "enter",
+	glfw.KeyTab:          "tab",
+	glfw.KeyHome:         "home",
+	glfw.KeyEnd:          "end",
+	glfw.KeyPageUp:       "pageup",
+	glfw.KeyPageDown:     "pagedown",
+	glfw.KeyLeftShift:    "shift",
+	glfw.KeyRightShift:   "shift",
+	glfw.KeyLeftControl:  "ctrl",
+	glfw.KeyRightControl: "ctrl",
+	glfw.KeyLeftAlt:      "alt",
+	glfw.KeyRightAlt:     "alt",
+}
+
 func (w *Win) eventThread() {
 	var moX, moY int
-
-	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
-		switch action {
-		case glfw.Press:
-			w.eventsIn <- gui.Eventf("mo/down/%d/%d", moX, moY)
-		case glfw.Release:
-			w.eventsIn <- gui.Eventf("mo/up/%d/%d", moX, moY)
-		}
-	})
 
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
 		w.eventsIn <- gui.Eventf("mo/move/%d/%d", moX, moY)
 	})
 
-	w.w.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, _ glfw.ModifierKey) {
-		k := -1
-
-		switch key {
-		case glfw.KeyLeft:
-			k = gui.KeyLeft
-		case glfw.KeyRight:
-			k = gui.KeyRight
-		case glfw.KeyUp:
-			k = gui.KeyUp
-		case glfw.KeyDown:
-			k = gui.KeyDown
-		case glfw.KeyEscape:
-			k = gui.KeyEscape
-		case glfw.KeySpace:
-			k = gui.KeySpace
-		case glfw.KeyBackspace:
-			k = gui.KeyBackspace
-		case glfw.KeyDelete:
-			k = gui.KeyDelete
-		case glfw.KeyEnter:
-			k = gui.KeyEnter
-		case glfw.KeyTab:
-			k = gui.KeyTab
-		case glfw.KeyHome:
-			k = gui.KeyHome
-		case glfw.KeyEnd:
-			k = gui.KeyEnd
-		case glfw.KeyPageUp:
-			k = gui.KeyPageUp
-		case glfw.KeyPageDown:
-			k = gui.KeyPageDown
-		case glfw.KeyLeftShift, glfw.KeyRightShift:
-			k = gui.KeyShift
-		case glfw.KeyLeftControl, glfw.KeyRightControl:
-			k = gui.KeyCtrl
-		case glfw.KeyLeftAlt, glfw.KeyRightAlt:
-			k = gui.KeyAlt
-		}
-
-		if k == -1 {
+	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
+		b, ok := buttonNames[button]
+		if !ok {
 			return
 		}
-
 		switch action {
 		case glfw.Press:
-			w.eventsIn <- gui.Eventf("kb/down/%d", k)
+			w.eventsIn <- gui.Eventf("mo/down/%d/%d/%s", moX, moY, b)
 		case glfw.Release:
-			w.eventsIn <- gui.Eventf("kb/up/%d", k)
-		case glfw.Repeat:
-			w.eventsIn <- gui.Eventf("kb/repeat/%d", k)
+			w.eventsIn <- gui.Eventf("mo/up/%d/%d/%s", moX, moY, b)
 		}
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
 		w.eventsIn <- gui.Eventf("kb/type/%d", r)
+	})
+
+	w.w.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, _ glfw.ModifierKey) {
+		k, ok := keyNames[key]
+		if !ok {
+			return
+		}
+		switch action {
+		case glfw.Press:
+			w.eventsIn <- gui.Eventf("kb/down/%s", k)
+		case glfw.Release:
+			w.eventsIn <- gui.Eventf("kb/up/%s", k)
+		case glfw.Repeat:
+			w.eventsIn <- gui.Eventf("kb/repeat/%s", k)
+		}
 	})
 
 	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
