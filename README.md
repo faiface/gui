@@ -10,13 +10,23 @@ go get -u github.com/faiface/gui
 
 Currently uses [GLFW](https://www.glfw.org/) under the hood, so have [these dependencies](https://github.com/go-gl/glfw#installation).
 
+## What needs getting done?
+
+This package is solid, but not complete. Here are some of the things that I'd love to get done with your help:
+
+- Get rid of the C dependencies.
+- Mobile support.
+- A widgets/layout package.
+
+Contributions are highly welcome!
+
 ## Overview
 
 The idea of concurrent GUI pre-dates Go and is found in another language by Rob Pike called Newsqueak. He explains it quite nicely in [this talk](https://www.youtube.com/watch?v=hB05UFqOtFA&t=2408s). Newsqueak was similar to Go, mostly in that it had channels.
 
 Why the hell has no one made a concurrent GUI in Go yet? I have no idea. Go is a perfect language for such a thing. Let's change that!
 
-**This package is a minimal foundation for a concurrent GUI in Go.** I doesn't include widgets, layout systems, or anything like that. The main reason is that I am not yet sure how to do them most correctly in a concurrent GUI. So, instead of providing a half-assed, "fully-featured" library, I decided to make a small, rock-solid package, where everything is right.
+**This package is a minimal foundation for a concurrent GUI in Go.** It doesn't include widgets, layout systems, or anything like that. The main reason is that I am not yet sure how to do them most correctly. So, instead of providing a half-assed, "fully-featured" library, I decided to make a small, rock-solid package, where everything is right.
 
 **So, how does this work?**
 
@@ -31,16 +41,18 @@ type Env interface {
 
 It's something that produces events (such as mouse clicks and key presses) and accepts draw commands.
 
-Closing the `Draw()` channel destroys the environment. When destroyed (either by closing the `Draw()` channel or due to any other reason), the environment will always close the `Events()` channel.
+Closing the `Draw()` channel destroys the environment. When destroyed (either by closing the `Draw()` channel or by any other reason), the environment will always close the `Events()` channel.
 
 As you can see, a draw command is a function that draws something onto a [`draw.Image`](https://golang.org/pkg/image/draw/#Image) and returns a rectangle telling which part got changed.
+
+![Draw](images/draw.png)
 
 Yes, `faiface/gui` uses CPU for drawing. You won't make AAA games with it, but the performance is enough for most GUI apps. The benefits are outstanding, though:
 
 1. Drawing is as simple as changing pixels.
 2. No FPS (frames per second), results are immediately on the screen.
 3. No need to organize the API around a GPU library, like OpenGL.
-4. Use all the good packages, like [`"golang.org/x/image/font"`](https://godoc.org/golang.org/x/image/font) for fonts, or [`"github.com/fogleman/gg"`](https://godoc.org/github.com/fogleman/gg) for shapes.
+4. Use all the good packages, like [`"image"`](https://golang.org/pkg/image/), [`"image/draw"`](https://golang.org/pkg/image/draw/), [`"golang.org/x/image/font"`](https://godoc.org/golang.org/x/image/font) for fonts, or [`"github.com/fogleman/gg"`](https://godoc.org/github.com/fogleman/gg) for shapes.
 
 What is an [`Event`](https://godoc.org/github.com/faiface/gui#Event)? It's a `string`:
 
@@ -48,36 +60,47 @@ What is an [`Event`](https://godoc.org/github.com/faiface/gui#Event)? It's a `st
 type Event string
 ```
 
-Examples of `Event` strings are: `"wi/close"`, `"mo/move/104/320"`, `"kb/type/71"` (where `"wi"`, `"mo"`, and `"kb"` stand for _window_, _mouse_, and _keyboard_, respectively). The nice consequence of this form is that we can pattern match on it:
+Examples of `Event` strings are: `"wi/close"`, `"mo/move/104/320"`, `"kb/type/71"` (where `"wi"`, `"mo"`, and `"kb"` stand for _window_, _mouse_, and _keyboard_, respectively). A nice consequence of this form is that we can pattern match on it:
 
 ```go
 switch {
+case event.Matches("resize/%d/%d", &w, &h):
+    // environment resized to (w, h)
 case event.Matches("wi/close"):
     // window closed
 case event.Matches("mo/move/%d/%d", &x, &y):
     // mouse moved to (x, y)
-case event.Matches("mo/down/%d/%d", &x, &y):
-    // mouse pressed on (x, y)
-case event.Matches("mo/up/%d/%d", &x, &y):
-    // mouse released on (x, y)
+case event.Matches("mo/down/%d/%d/%s", &x, &y, &btn):
+    // mouse button pressed on (x, y)
+case event.Matches("mo/up/%d/%d/%s", &x, &y, &btn):
+    // mouse button released on (x, y)
 case event.Matches("kb/type/%d", &r):
     // rune r typed on the keyboard (encoded as a number in the event string)
-case event.Matches("kb/down/%d", &k):
-    // key k pressed on the keyboard
-case event.Matches("kb/up/%d", &k):
-    // key k released on the keyboard
-case event.Matches("kb/repeat/%d", &k):
-    // key k repeated on the keyboard (happens when held)
-case event.Matches("resize/%d/%d", &w, &h):
-    // environment resized to (w, h)
+case event.Matches("kb/down/%s", &key):
+    // keyboard key pressed on the keyboard
+case event.Matches("kb/up/%s", &key):
+    // keyboard key released on the keyboard
+case event.Matches("kb/repeat/%s", &key):
+    // keyboard key repeated on the keyboard (happens when held)
 }
 ```
 
-This shows all the possible events that a window can produce.
+This shows all the possible events that a window can produce. You can find a little more info (especially on the keys) [here in GoDoc](https://godoc.org/github.com/faiface/gui/win#Win).
 
-The current, limited list of key constants can be [found here](https://godoc.org/github.com/faiface/gui#pkg-constants).
+The `"resize"` event is not prefixed with `"wi/"`, because it's not specific to windows.
 
-The `"resize"` event is not prefixed with `"wi/"`, because it's not specific to windows. Events are easily extensible, for example, the `"mo/down/%d/%d"` event can be (and almost certainly will be) enriched with button of the mouse information, for example: `"mo/down/%d/%d/left"`.
+You can also match only specific buttons/keys, or ignore them:
+
+```go
+switch {
+case event.Matches("mo/down/%d/%d/left", &x, &y):
+	// only matches when the left button is pressed
+case event.Matches("kb/down/up"):
+	// matches the UP key on the keyboard
+case event.Matches("mo/down/%d/%d", &x, &y):
+	// matches mouse press with any button
+}
+```
 
 How do we create a window? With the [`"github.com/faiface/gui/win"`](https://godoc.org/github.com/faiface/gui/win) package:
 
@@ -88,13 +111,13 @@ w, err := win.New(win.Title("faiface/win"), win.Size(800, 600), win.Resizable())
 
 The [`win.New`](https://godoc.org/github.com/faiface/gui/win#New) constructor uses the [functional options pattern](https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis) by Dave Cheney. Unsurprisingly, the returned [`*win.Win`](https://godoc.org/github.com/faiface/gui/win#Win) is an `Env`.
 
-Due to stupid limitations imposed by operating systems, the internal code that fetches events from the OS must run on the main thread of the program. To ensure this, we need to call [`mainthread.Run`](https://godoc.org/github.com/faiface/mainthread) in the `main` function:
+Due to stupid limitations imposed by operating systems, the internal code that fetches events from the OS must run on the main thread of the program. To ensure this, we need to call [`mainthread.Run`](https://godoc.org/github.com/faiface/mainthread#Run) in the `main` function:
 
 ```go
 import "github.com/faiface/mainthread"
 
 func run() {
-    // do everything here
+    // do everything here, this becomes the new main function
 }
 
 func main() {
@@ -152,7 +175,7 @@ A [`Mux`](https://godoc.org/github.com/faiface/gui#Mux) basically lets you split
 
 When the original `Env` produces an event, `Mux` sends it to each one of the multiple `Env`s.
 
-When any one of the multiple `Env`s sends a draw function, `Mux` sends it to the original `Env`.
+When any one of the multiple `Env`s receives a draw function, `Mux` sends it to the original `Env`.
 
 To mux an `Env`, use [`gui.NewMux`](https://godoc.org/github.com/faiface/gui#NewMux):
 
@@ -168,7 +191,7 @@ Don't use the original `Env` after muxing it. The `Mux` is using it and you'll s
 
 To create more `Env`s, we can use [`mux.MakeEnv()`](https://godoc.org/github.com/faiface/gui#Mux.MakeEnv):
 
-For example, here's a simple program that creates a blinking square whenever you click somewhere. The square will blink 3 times and then disappear:
+For example, here's a simple program that shows four white rectangles on the screen. Whenever the user clicks on any of them, the rectangle blinks (switches between white and black) 3 times. We use `Mux` to send events to all of the rectangles independently:
 
 ```go
 package main
@@ -184,23 +207,38 @@ import (
 )
 
 func Blinker(env gui.Env, r image.Rectangle) {
-	for i := 0; i < 3; i++ {
-		// switch to white
-		env.Draw() <- func(drw draw.Image) image.Rectangle {
-			draw.Draw(drw, r, image.White, image.ZP, draw.Src)
+	// redraw takes a bool and produces a draw command
+	redraw := func(visible bool) func(draw.Image) image.Rectangle {
+		return func(drw draw.Image) image.Rectangle {
+			if visible {
+				draw.Draw(drw, r, image.White, image.ZP, draw.Src)
+			} else {
+				draw.Draw(drw, r, image.Black, image.ZP, draw.Src)
+			}
 			return r
 		}
-		time.Sleep(time.Second / 2)
-
-		// switch to black
-		env.Draw() <- func(drw draw.Image) image.Rectangle {
-			draw.Draw(drw, r, image.Black, image.ZP, draw.Src)
-			return r
-		}
-		time.Sleep(time.Second / 2)
 	}
 
-	// close the environment
+	// first we draw a white rectangle
+	env.Draw() <- redraw(true)
+
+	for event := range env.Events() {
+		var x, y int
+		switch {
+		case event.Matches("mo/down/%d/%d", &x, &y):
+			if image.Pt(x, y).In(r) {
+				// user clicked on the rectangle
+				// we blink 3 times
+				for i := 0; i < 3; i++ {
+					env.Draw() <- redraw(false)
+					time.Sleep(time.Second / 3)
+					env.Draw() <- redraw(true)
+					time.Sleep(time.Second / 3)
+				}
+			}
+		}
+	}
+
 	close(env.Draw())
 }
 
@@ -212,14 +250,17 @@ func run() {
 
 	mux, env := gui.NewMux(w)
 
+	// we create four blinkers, each with its own Env from the mux
+	go Blinker(mux.MakeEnv(), image.Rect(100, 100, 350, 250))
+	go Blinker(mux.MakeEnv(), image.Rect(450, 100, 700, 250))
+	go Blinker(mux.MakeEnv(), image.Rect(100, 350, 350, 500))
+	go Blinker(mux.MakeEnv(), image.Rect(450, 350, 700, 500))
+
+	// we use the master env now, w is used by the mux
 	for event := range env.Events() {
-		var x, y int
 		switch {
 		case event.Matches("wi/close"):
 			close(env.Draw())
-
-		case event.Matches("mo/down/%d/%d", &x, &y):
-			go Blinker(mux.MakeEnv(), image.Rect(x-30, y-30, x+30, y+30))
 		}
 	}
 }
@@ -229,7 +270,7 @@ func main() {
 }
 ```
 
-Closing the `Draw()` channel on an `Env` created by `mux.MakeEnv()` removes the `Env` from the `Mux`.
+Just for the info, losing the `Draw()` channel on an `Env` created by `mux.MakeEnv()` removes the `Env` from the `Mux`.
 
 What if one of the `Env`s hangs and stops consuming events, or if it simply takes longer to consume them? Will all the other `Env`s hang as well?
 
@@ -238,17 +279,6 @@ They won't, because the channels of events have unlimited capacity and never blo
 ![Events](images/events.png)
 
 And that's basically all you need to know about `faiface/gui`! Happy hacking!
-
-## What next?
-
-This package is rock-solid, but nowhere near complete. Here are some of the things that I'd love to get done with your help:
-
-- Get rid of the C dependencies.
-- Mobile support.
-- More event types and more key constants.
-- A widgets/layout package.
-
-Contributions are highly welcome!
 
 ## Licence
 
