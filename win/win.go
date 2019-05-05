@@ -111,6 +111,8 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 //
 // It receives its events from the OS and it draws to the surface of the window.
 //
+// Warning: only one window can be open at a time. This will be fixed.
+//
 // Here are all kinds of events that a window can produce, along with descriptions.
 // Things enclosed in <> are values that are filled in.
 //
