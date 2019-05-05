@@ -15,6 +15,7 @@ Currently uses [GLFW](https://www.glfw.org/) under the hood, so have [these depe
 This package is solid, but not complete. Here are some of the things that I'd love to get done with your help:
 
 - Get rid of the C dependencies.
+- Support multiple windows.
 - Mobile support.
 - A widgets/layout package.
 
