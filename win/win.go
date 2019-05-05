@@ -129,8 +129,7 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 //   left right middle
 // <key> is one of:
 //   left right up down escape space backspace delete enter
-//   tab home end pageup pagedown shift shift ctrl ctrl alt
-//   alt
+//   tab home end pageup pagedown shift ctrl alt
 type Win struct {
 	eventsOut <-chan gui.Event
 	eventsIn  chan<- gui.Event
