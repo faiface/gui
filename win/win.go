@@ -200,6 +200,10 @@ func (w *Win) eventThread() {
 		}
 	})
 
+	w.w.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
+		w.eventsIn <- gui.Eventf("mo/scroll/%d/%d", int(yoff), int(xoff))
+	})
+
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {
 		w.eventsIn <- gui.Eventf("kb/type/%d", r)
 	})
