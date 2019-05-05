@@ -10,6 +10,22 @@ go get -u github.com/faiface/gui
 
 Currently uses [GLFW](https://www.glfw.org/) under the hood, so have [these dependencies](https://github.com/go-gl/glfw#installation).
 
+## Why concurrent GUI?
+
+GUI is concurrent by nature. Elements like buttons, text fields, or canvases are conceptually independent. Conventional GUI frameworks solve this by implementing huge architectures: the event
+loop, call-backs, tickers, you name it.
+
+In a concurrent GUI, the story is different. Each element is actually handled by its own goroutine,
+or event multiple ones. Elements communicate with each other via channels.
+
+This has several advantages:
+
+- Make a new element at any time just by spawning a goroutine.
+- Implement animations using simple for-loops.
+- An intenstive computation in one element won't block the whole app.
+- Enables decentralized design - since elements communicate via channels, multiple communications
+  may be going on at once, without any central entity.
+
 ## What needs getting done?
 
 This package is solid, but not complete. Here are some of the things that I'd love to get done with your help:
