@@ -125,12 +125,12 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 //   kb/repeat/<key>           A key on the keyboard repeated (happens when held).
 //
 // <w>, <h>, <x>, <y>, and <code> are numbers (%d).
-// <button> is one of (without quotes):
-//   "left", "right", "middle"
-// <key> is one of (without quotes):
-//   "left", "right", "up", "down", "escape", "space", "backspace", "delete", "enter",
-//   "tab", "home", "end", "pageup", "pagedown", "shift", "shift", "ctrl", "ctrl", "alt",
-//   "alt"
+// <button> is one of:
+//   left right middle
+// <key> is one of:
+//   left right up down escape space backspace delete enter
+//   tab home end pageup pagedown shift shift ctrl ctrl alt
+//   alt
 type Win struct {
 	eventsOut <-chan gui.Event
 	eventsIn  chan<- gui.Event
