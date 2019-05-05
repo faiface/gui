@@ -50,7 +50,9 @@ func Button(env gui.Env, theme *Theme, text string, action func()) {
 
 		case e.Matches("mo/up/%d/%d/left", &x, &y):
 			if pressed {
-				action()
+				if image.Pt(x, y).In(r) {
+					action()
+				}
 				pressed = false
 				env.Draw() <- redraw(r, over, pressed)
 			}
