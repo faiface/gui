@@ -325,7 +325,7 @@ env.Draw() <- func(drw draw.Image) image.Rectangle {
 
 The code above has a danger of a race condition. The code that changes the `pressed` variable and the code that uses it may run concurrently.
 
-**My advice is to never enclose an outer variable in a drawing function.**
+**My advice is to never enclose a shared variable in a drawing function.**
 
 Instead, you can do this:
 
