@@ -26,6 +26,12 @@ This has several advantages:
 - Enables decentralized design - since elements communicate via channels, multiple communications
   may be going on at once, without any central entity.
 
+## Examples
+
+| [Image Viewer](examples/imageviewer) | [Paint](examples/pain) | [Pexeso](examples/pexeso) |
+| --- | --- | --- |
+| ![Image Viewer Screenshot](examples/imageviewer/screenshot.png) | ![Paint Screenshot](examples/paint/screenshot.png) | ![Pexeso Screenshot](examples/pexeso/screenshot.png) |
+
 ## What needs getting done?
 
 This package is solid, but not complete. Here are some of the things that I'd love to get done with your help:
