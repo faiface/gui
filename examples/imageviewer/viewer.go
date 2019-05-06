@@ -54,10 +54,10 @@ func Viewer(env gui.Env, theme *Theme, view <-chan string) {
 				return
 			}
 
-			var minX, minY, maxX, maxY int
+			var x0, y0, x1, y1 int
 			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &minX, &minY, &maxX, &maxY):
-				r = image.Rect(minX, minY, maxX, maxY)
+			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
+				r = image.Rect(x0, y0, x1, y1)
 				env.Draw() <- redraw(r, img)
 			}
 		}

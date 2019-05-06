@@ -131,18 +131,18 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 // Here are all kinds of events that a window can produce, along with descriptions.
 // Things enclosed in <> are values that are filled in.
 //
-//   resize/<w>/<h>            Window resized to w x h.
-//   wi/close                  Window close button pressed.
-//   mo/move/<x>/<y>           Mouse moved to (x, y).
-//   mo/down/<x>/<y>/<button>  A mouse button pressed on (x, y).
-//   mo/up/<x>/<y>/<button>    A mouse button released on (x, y).
-//   mo/scroll/<x>/<y>         Mouse scrolled by (x, y).
-//   kb/type/<code>            A unicode character typed on the keyboard.
-//   kb/down/<key>             A key on the keyboard pressed.
-//   kb/up/<key>               A key on the keyboard released.
-//   kb/repeat/<key>           A key on the keyboard repeated (happens when held).
+//   resize/<x0>/<y0>/<x1>/<y1>  Window resized to (x0, y0, x1, y1).
+//   wi/close                    Window close button pressed.
+//   mo/move/<x>/<y>             Mouse moved to (x, y).
+//   mo/down/<x>/<y>/<button>    A mouse button pressed on (x, y).
+//   mo/up/<x>/<y>/<button>      A mouse button released on (x, y).
+//   mo/scroll/<x>/<y>           Mouse scrolled by (x, y).
+//   kb/type/<code>              A unicode character typed on the keyboard.
+//   kb/down/<key>               A key on the keyboard pressed.
+//   kb/up/<key>                 A key on the keyboard released.
+//   kb/repeat/<key>             A key on the keyboard repeated (happens when held).
 //
-// <w>, <h>, <x>, <y>, and <code> are numbers (%d).
+// <x0>, <y0>, <x1>, <y1>, <w>, <h>, <x>, <y>, and <code> are numbers (%d).
 // <button> is one of:
 //   left right middle
 // <key> is one of:

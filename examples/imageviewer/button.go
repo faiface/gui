@@ -34,11 +34,11 @@ func Button(env gui.Env, theme *Theme, text string, action func()) {
 	)
 
 	for e := range env.Events() {
-		var x, y, minX, minY, maxX, maxY int
+		var x, y, x0, y0, x1, y1 int
 
 		switch {
-		case e.Matches("resize/%d/%d/%d/%d", &minX, &minY, &maxX, &maxY):
-			r = image.Rect(minX, minY, maxX, maxY)
+		case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
+			r = image.Rect(x0, y0, x1, y1)
 			env.Draw() <- redraw(r, over, pressed)
 
 		case e.Matches("mo/down/%d/%d/left", &x, &y):
