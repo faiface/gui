@@ -76,6 +76,21 @@ func New(opts ...Option) (*Win, error) {
 		return nil, err
 	}
 
+	mainthread.Call(func() {
+		// hiDPI hack
+		width, _ := w.w.GetFramebufferSize()
+		ratioW := width / o.width
+		if ratioW != 1 {
+			o.width /= ratioW
+			o.height /= ratioW
+		}
+		w.w.Destroy()
+		w.w, err = makeGLFWWin(&o)
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	bounds := image.Rect(0, 0, o.width, o.height)
 	w.img = image.NewRGBA(bounds)
 
@@ -223,7 +238,7 @@ func (w *Win) eventThread() {
 		}
 	})
 
-	w.w.SetSizeCallback(func(_ *glfw.Window, width, height int) {
+	w.w.SetFramebufferSizeCallback(func(_ *glfw.Window, width, height int) {
 		r := image.Rect(0, 0, width, height)
 		w.newSize <- r
 		w.eventsIn <- gui.Eventf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
