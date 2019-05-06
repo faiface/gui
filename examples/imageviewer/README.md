@@ -15,3 +15,5 @@ The file browser accepts messages from the `cd` channel of type `chan string`. T
 The viewer element accepts messages from the `view` channel of type `chan string`. When you click two times on a file in the file browser, the browser sends the file name to the viewer over this channel. The viewer will attempt to open and decode the file and shows the image if it succeeds. Otherwise it shows text _'Invalid image'_.
 
 The most visible advantage of the concurrent approach here is that when the image takes longer to load, the rest of the UI remains responsive. Another, subtler advantage is that each element is self-contained, implemented using simple loops. The program should therefore be easy to understand and extend (the only barrier to understanding could be that I wrote it over an evening, but I'll try and make the code cleaner over time).
+
+Uses [golang.org/x/image/font](https://godoc.org/golang.org/x/image/font) for drawing text.
