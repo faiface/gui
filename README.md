@@ -309,6 +309,40 @@ They won't, because the channels of events have unlimited capacity and never blo
 
 And that's basically all you need to know about `faiface/gui`! Happy hacking!
 
+## A note on race conditions
+
+There is no guarantee when a function sent to the `Draw()` channel will be executed, or if at all. Look at this code:
+
+```go
+pressed := false
+
+env.Draw() <- func(drw draw.Image) image.Rectangle {
+	// use pressed somehow
+}
+
+// change pressed somewhere here
+```
+
+The code above has a danger of a race condition. The code that changes the `pressed` variable and the code that uses it may run concurrently.
+
+**My advice is to never enclose an outer variable in a drawing function.**
+
+Instead, you can do this:
+
+```go
+redraw := func(pressed bool) func(draw.Image) image.Rectangle {
+	return func(drw draw.Image) image.Rectangle {
+		// use the pressed argument
+	}
+}
+
+pressed := false
+
+env.Draw() <- redraw(pressed)
+
+// changing pressed here doesn't cause race conditions
+```
+
 ## Licence
 
 [MIT](LICENCE)
