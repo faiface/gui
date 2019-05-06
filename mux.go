@@ -18,7 +18,7 @@ type Mux struct {
 }
 
 // NewMux creates a new Mux that multiplexes the given Env. It returns the Mux along with
-// a master Env. A master Env is just like any other Env created by the Mux, except that
+// a master Env. The master Env is just like any other Env created by the Mux, except that
 // closing the Draw() channel on the master Env closes the whole Mux and all other Envs
 // created by the Mux.
 func NewMux(env Env) (mux *Mux, master Env) {
