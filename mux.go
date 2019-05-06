@@ -28,10 +28,10 @@ func NewMux(env Env) (mux *Mux, master Env) {
 
 	go func() {
 		for e := range env.Events() {
-			var minX, minY, maxX, maxY int
-			if e.Matches("resize/%d/%d/%d/%d", &minX, &minY, &maxX, &maxY) {
+			var x0, y0, x1, y1 int
+			if e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1) {
 				mux.mu.Lock()
-				mux.r = image.Rect(minX, minY, maxX, maxY)
+				mux.r = image.Rect(x0, y0, x1, y1)
 				mux.haveR = true
 				mux.mu.Unlock()
 			}
