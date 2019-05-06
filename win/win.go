@@ -200,7 +200,7 @@ func (w *Win) eventThread() {
 
 	w.w.SetCursorPosCallback(func(_ *glfw.Window, x, y float64) {
 		moX, moY = int(x), int(y)
-		w.eventsIn <- gui.Eventf("mo/move/%d/%d", moX, moY)
+		w.eventsIn <- gui.Eventf("mo/move/%d/%d", moX*w.ratio, moY*w.ratio)
 	})
 
 	w.w.SetMouseButtonCallback(func(_ *glfw.Window, button glfw.MouseButton, action glfw.Action, mod glfw.ModifierKey) {
