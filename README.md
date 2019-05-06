@@ -100,7 +100,9 @@ case event.Matches("mo/move/%d/%d", &x, &y):
 case event.Matches("mo/down/%d/%d/%s", &x, &y, &btn):
     // mouse button pressed on (x, y)
 case event.Matches("mo/up/%d/%d/%s", &x, &y, &btn):
-    // mouse button released on (x, y)
+	// mouse button released on (x, y)
+case event.Matches("mo/scroll/%d/%d", &x, &y):
+	// mouse scrolled by (x, y)
 case event.Matches("kb/type/%d", &r):
     // rune r typed on the keyboard (encoded as a number in the event string)
 case event.Matches("kb/down/%s", &key):

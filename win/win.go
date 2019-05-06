@@ -136,6 +136,7 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 //   mo/move/<x>/<y>           Mouse moved to (x, y).
 //   mo/down/<x>/<y>/<button>  A mouse button pressed on (x, y).
 //   mo/up/<x>/<y>/<button>    A mouse button released on (x, y).
+//   mo/scroll/<x>/<y>         Mouse scrolled by (x, y).
 //   kb/type/<code>            A unicode character typed on the keyboard.
 //   kb/down/<key>             A key on the keyboard pressed.
 //   kb/up/<key>               A key on the keyboard released.
@@ -217,7 +218,7 @@ func (w *Win) eventThread() {
 	})
 
 	w.w.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		w.eventsIn <- gui.Eventf("mo/scroll/%d/%d", int(yoff), int(xoff))
+		w.eventsIn <- gui.Eventf("mo/scroll/%d/%d", int(xoff), int(yoff))
 	})
 
 	w.w.SetCharCallback(func(_ *glfw.Window, r rune) {

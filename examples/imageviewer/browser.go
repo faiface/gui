@@ -157,7 +157,7 @@ func Browser(env gui.Env, theme *Theme, dir string, cd <-chan string, view chan<
 					env.Draw() <- redraw(r, selected, position, lineHeight, namesImage)
 				}
 
-			case e.Matches("mo/scroll/%d/%d", &y, &x):
+			case e.Matches("mo/scroll/%d/%d", &x, &y):
 				newP := position.Sub(image.Pt(int(x*16), int(y*16)))
 				if newP.X > namesImage.Bounds().Max.X-r.Dx() {
 					newP.X = namesImage.Bounds().Max.X - r.Dx()
