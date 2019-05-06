@@ -1,5 +1,9 @@
 # Pexeso
 
+```
+$ go run main.go
+```
+
 The [game of pairs](https://en.wikipedia.org/wiki/Concentration_(card_game)), also know as _concentration_, _match match_, or _pexeso_. This one has an extraordinarily beautiful concurrent solution.
 
 ![Screenshot](screenshot.png)

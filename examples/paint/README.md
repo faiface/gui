@@ -1,5 +1,9 @@
 # Paint
 
+```
+$ go run main.go
+```
+
 This is a simple paint program. Pick colors on the right, draw on the rest.
 
 ![Screenshot](screenshot.png)
