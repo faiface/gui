@@ -15,6 +15,8 @@ import (
 // supplied draw.Image, which is the drawing area of the Env and returns a rectangle
 // covering the whole part of the image that got changed.
 //
+// An Env guarantees to produce a "resize/<x0>/<y0>/<x1>/<y1>" event as its first event.
+//
 // The Events() channel must be unlimited in capacity. Use MakeEventsChan() to create
 // a channel of events with an unlimited capacity.
 //

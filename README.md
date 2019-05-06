@@ -91,8 +91,8 @@ Examples of `Event` strings are: `"wi/close"`, `"mo/move/104/320"`, `"kb/type/71
 
 ```go
 switch {
-case event.Matches("resize/%d/%d", &w, &h):
-    // environment resized to (w, h)
+case event.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
+    // environment resized to (x0, y0, x1, y1)
 case event.Matches("wi/close"):
     // window closed
 case event.Matches("mo/move/%d/%d", &x, &y):
@@ -116,7 +116,7 @@ case event.Matches("kb/repeat/%s", &key):
 
 This shows all the possible events that a window can produce. You can find a little more info (especially on the keys) [here in GoDoc](https://godoc.org/github.com/faiface/gui/win#Win).
 
-The `"resize"` event is not prefixed with `"wi/"`, because it's not specific to windows.
+The `"resize"` event is not prefixed with `"wi/"`, because it's not specific to windows. It is also guaranteed to be the first event produced by any `Env`.
 
 You can also match only specific buttons/keys, or ignore them:
 
