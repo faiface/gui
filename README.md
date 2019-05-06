@@ -1,4 +1,4 @@
-# faiface/gui [![GoDoc](https://godoc.org/github.com/faiface/gui?status.svg)](https://godoc.org/github.com/faiface/gui)
+# faiface/gui [![GoDoc](https://godoc.org/github.com/faiface/gui?status.svg)](https://godoc.org/github.com/faiface/gui) [![Discord](https://img.shields.io/badge/chat-on%20discord-9cf.svg)](https://discord.gg/T5YAAT2)
 
 Super minimal, rock-solid package for concurrent GUI in Go.
 
