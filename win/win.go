@@ -79,10 +79,10 @@ func New(opts ...Option) (*Win, error) {
 	mainthread.Call(func() {
 		// hiDPI hack
 		width, _ := w.w.GetFramebufferSize()
-		ratioW := width / o.width
-		if ratioW != 1 {
-			o.width /= ratioW
-			o.height /= ratioW
+		w.ratio = width / o.width
+		if w.ratio != 1 {
+			o.width /= w.ratio
+			o.height /= w.ratio
 		}
 		w.w.Destroy()
 		w.w, err = makeGLFWWin(&o)
@@ -155,8 +155,9 @@ type Win struct {
 	newSize chan image.Rectangle
 	finish  chan struct{}
 
-	w   *glfw.Window
-	img *image.RGBA
+	w     *glfw.Window
+	img   *image.RGBA
+	ratio int
 }
 
 // Events returns the events channel of the window.
@@ -209,9 +210,9 @@ func (w *Win) eventThread() {
 		}
 		switch action {
 		case glfw.Press:
-			w.eventsIn <- gui.Eventf("mo/down/%d/%d/%s", moX, moY, b)
+			w.eventsIn <- gui.Eventf("mo/down/%d/%d/%s", moX*w.ratio, moY*w.ratio, b)
 		case glfw.Release:
-			w.eventsIn <- gui.Eventf("mo/up/%d/%d/%s", moX, moY, b)
+			w.eventsIn <- gui.Eventf("mo/up/%d/%d/%s", moX*w.ratio, moY*w.ratio, b)
 		}
 	})
 
