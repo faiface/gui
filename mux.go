@@ -8,6 +8,8 @@ import (
 
 type Mux struct {
 	mu        sync.Mutex
+	haveR     bool
+	r         image.Rectangle
 	eventsIns []chan<- Event
 	draw      chan<- func(draw.Image) image.Rectangle
 }
@@ -26,6 +28,13 @@ func NewMux(env Env) (mux *Mux, master Env) {
 
 	go func() {
 		for e := range env.Events() {
+			var minX, minY, maxX, maxY int
+			if e.Matches("resize/%d/%d/%d/%d", &minX, &minY, &maxX, &maxY) {
+				mux.mu.Lock()
+				mux.r = image.Rect(minX, minY, maxX, maxY)
+				mux.haveR = true
+				mux.mu.Unlock()
+			}
 			mux.mu.Lock()
 			for _, eventsIn := range mux.eventsIns {
 				eventsIn <- e
@@ -61,6 +70,10 @@ func (mux *Mux) makeEnv(master bool) Env {
 
 	mux.mu.Lock()
 	mux.eventsIns = append(mux.eventsIns, eventsIn)
+	// make sure to always send a resize event to a new Env if we got it already
+	if mux.haveR {
+		eventsIn <- Eventf("resize/%d/%d/%d/%d", mux.r.Min.X, mux.r.Min.Y, mux.r.Max.X, mux.r.Max.Y)
+	}
 	mux.mu.Unlock()
 
 	go func() {
