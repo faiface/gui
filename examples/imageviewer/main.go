@@ -6,8 +6,8 @@ import (
 	"github.com/faiface/gui"
 	"github.com/faiface/gui/win"
 	"github.com/faiface/mainthread"
-	"github.com/golang/image/font/gofont/goregular"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/gofont/goregular"
 )
 
 func run() {
