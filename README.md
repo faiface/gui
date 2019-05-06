@@ -28,7 +28,7 @@ This has several advantages:
 
 ## Examples
 
-| [Image Viewer](examples/imageviewer) | [Paint](examples/pain) | [Pexeso](examples/pexeso) |
+| [Image Viewer](examples/imageviewer) | [Paint](examples/paint) | [Pexeso](examples/pexeso) |
 | --- | --- | --- |
 | ![Image Viewer Screenshot](examples/imageviewer/screenshot.png) | ![Paint Screenshot](examples/paint/screenshot.png) | ![Pexeso Screenshot](examples/pexeso/screenshot.png) |
 
