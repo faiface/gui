@@ -91,7 +91,7 @@ func New(opts ...Option) (*Win, error) {
 		return nil, err
 	}
 
-	bounds := image.Rect(0, 0, o.width, o.height)
+	bounds := image.Rect(0, 0, o.width*w.ratio, o.height*w.ratio)
 	w.img = image.NewRGBA(bounds)
 
 	go func() {
