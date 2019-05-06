@@ -6,6 +6,9 @@ import (
 	"sync"
 )
 
+// Mux can be used to multiplex an Env, let's call it a root Env. Mux implements a way to
+// create multiple virtual Envs that all interact with the root Env. They receive the same
+// events and their draw functions get redirected to the root Env.
 type Mux struct {
 	mu        sync.Mutex
 	haveR     bool
@@ -14,6 +17,10 @@ type Mux struct {
 	draw      chan<- func(draw.Image) image.Rectangle
 }
 
+// NewMux creates a new Mux that multiplexes the given Env. It returns the Mux along with
+// a master Env. A master Env is just like any other Env created by the Mux, except that
+// closing the Draw() channel on the master Env closes the whole Mux and all other Envs
+// created by the Mux.
 func NewMux(env Env) (mux *Mux, master Env) {
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{draw: drawChan}
@@ -51,6 +58,9 @@ func NewMux(env Env) (mux *Mux, master Env) {
 	return mux, master
 }
 
+// MakeEnv creates a new virtual Env that interacts with the root Env of the Mux. Closing
+// the Draw() channel of the Env will not close the Mux, or any other Env created by the Mux
+// but will delete the Env from the Mux.
 func (mux *Mux) MakeEnv() Env {
 	return mux.makeEnv(false)
 }
