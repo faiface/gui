@@ -80,7 +80,8 @@ func (mux *Mux) makeEnv(master bool) Env {
 
 	mux.mu.Lock()
 	mux.eventsIns = append(mux.eventsIns, eventsIn)
-	// make sure to always send a resize event to a new Env if we got it already
+	// make sure to always send a resize event to a new Env if we got the size already
+	// that means it missed the resize event by the root Env
 	if mux.haveR {
 		eventsIn <- Eventf("resize/%d/%d/%d/%d", mux.r.Min.X, mux.r.Min.Y, mux.r.Max.X, mux.r.Max.Y)
 	}
