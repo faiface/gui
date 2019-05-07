@@ -10,7 +10,7 @@ import "fmt"
 //   wi/close
 //   mo/down/421/890
 //   kb/type/98
-//   resize/920/655
+//   resize/0/0/920/655
 //
 // As you can see, the common way is to form the event string like a file path,
 // from the most general information to the most specific. This allows pattern matching
@@ -26,8 +26,8 @@ import "fmt"
 //       // mouse released on (x, y)
 //   case event.Matches("kb/type/%d", &r):
 //       // rune r typed on the keyboard (encoded as a number in the event string)
-//   case event.Matches("resize/%d/%d", &w, &h):
-//       // environment resized to (w, h)
+//   case event.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
+//       // environment resized to (x0, y0, x1, y1)
 //   }
 //
 // And here's how to pattern match on the prefix of an event:
