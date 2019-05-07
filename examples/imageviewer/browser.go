@@ -33,7 +33,7 @@ func Browser(env gui.Env, theme *Theme, dir string, cd <-chan string, view chan<
 
 		var images []image.Image
 		for _, name := range names {
-			images = append(images, DrawText(name, theme.Face, theme.Text))
+			images = append(images, MakeTextImage(name, theme.Face, theme.Text))
 		}
 
 		const inset = 4
@@ -113,7 +113,7 @@ func Browser(env gui.Env, theme *Theme, dir string, cd <-chan string, view chan<
 
 			var (
 				x0, y0, x1, y1 int
-				x, y                   int
+				x, y           int
 			)
 
 			switch {

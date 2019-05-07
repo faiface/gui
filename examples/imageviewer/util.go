@@ -63,7 +63,7 @@ func TTFToFace(ttf []byte, size float64) (font.Face, error) {
 	})}, nil
 }
 
-func DrawText(text string, face font.Face, clr color.Color) image.Image {
+func MakeTextImage(text string, face font.Face, clr color.Color) image.Image {
 	drawer := &font.Drawer{
 		Src:  &image.Uniform{clr},
 		Face: face,

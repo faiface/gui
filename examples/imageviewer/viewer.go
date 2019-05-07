@@ -23,7 +23,7 @@ func Viewer(env gui.Env, theme *Theme, view <-chan string) {
 		}
 	}
 
-	invalid := DrawText("Invalid image", theme.Face, theme.Text)
+	invalid := MakeTextImage("Invalid image", theme.Face, theme.Text)
 
 	var (
 		r   image.Rectangle

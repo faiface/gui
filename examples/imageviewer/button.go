@@ -9,7 +9,7 @@ import (
 )
 
 func Button(env gui.Env, theme *Theme, text string, action func()) {
-	textImg := DrawText(text, theme.Face, theme.Text)
+	textImg := MakeTextImage(text, theme.Face, theme.Text)
 
 	redraw := func(r image.Rectangle, over, pressed bool) func(draw.Image) image.Rectangle {
 		return func(drw draw.Image) image.Rectangle {
