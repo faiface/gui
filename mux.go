@@ -10,11 +10,10 @@ import (
 // create multiple virtual Envs that all interact with the root Env. They receive the same
 // events and their draw functions get redirected to the root Env.
 type Mux struct {
-	mu        sync.Mutex
-	haveR     bool
-	r         image.Rectangle
-	eventsIns []chan<- Event
-	draw      chan<- func(draw.Image) image.Rectangle
+	mu         sync.Mutex
+	lastResize Event
+	eventsIns  []chan<- Event
+	draw       chan<- func(draw.Image) image.Rectangle
 }
 
 // NewMux creates a new Mux that multiplexes the given Env. It returns the Mux along with
@@ -35,11 +34,9 @@ func NewMux(env Env) (mux *Mux, master Env) {
 
 	go func() {
 		for e := range env.Events() {
-			var x0, y0, x1, y1 int
-			if e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1) {
+			if e.Matches("resize/") {
 				mux.mu.Lock()
-				mux.r = image.Rect(x0, y0, x1, y1)
-				mux.haveR = true
+				mux.lastResize = e
 				mux.mu.Unlock()
 			}
 			mux.mu.Lock()
@@ -82,8 +79,8 @@ func (mux *Mux) makeEnv(master bool) Env {
 	mux.eventsIns = append(mux.eventsIns, eventsIn)
 	// make sure to always send a resize event to a new Env if we got the size already
 	// that means it missed the resize event by the root Env
-	if mux.haveR {
-		eventsIn <- Eventf("resize/%d/%d/%d/%d", mux.r.Min.X, mux.r.Min.Y, mux.r.Max.X, mux.r.Max.Y)
+	if mux.lastResize != "" {
+		eventsIn <- mux.lastResize
 	}
 	mux.mu.Unlock()
 
