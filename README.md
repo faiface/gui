@@ -81,55 +81,46 @@ Yes, `faiface/gui` uses CPU for drawing. You won't make AAA games with it, but t
 3. No need to organize the API around a GPU library, like OpenGL.
 4. Use all the good packages, like [`"image"`](https://golang.org/pkg/image/), [`"image/draw"`](https://golang.org/pkg/image/draw/), [`"golang.org/x/image/font"`](https://godoc.org/golang.org/x/image/font) for fonts, or [`"github.com/fogleman/gg"`](https://godoc.org/github.com/fogleman/gg) for shapes.
 
-What is an [`Event`](https://godoc.org/github.com/faiface/gui#Event)? It's a `string`:
+What is an [`Event`](https://godoc.org/github.com/faiface/gui#Event)? It's an interface:
 
 ```go
-type Event string
+type Event interface {
+	String() string
+}
 ```
 
-Examples of `Event` strings are: `"wi/close"`, `"mo/move/104/320"`, `"kb/type/71"` (where `"wi"`, `"mo"`, and `"kb"` stand for _window_, _mouse_, and _keyboard_, respectively). A nice consequence of this form is that we can pattern match on it:
+This purpose of this interface is to hold different kinds of events and be able to discriminate among them using a type switch.
+
+Examples of concrete `Event` types strings are: [`gui.Resize`](https://godoc.org/github.com/faiface/gui#Resize), [`win.WiClose`](https://godoc.org/github.com/faiface/gui/win#WiClose), [`win.MoDown`](https://godoc.org/github.com/faiface/gui/win#MoDown), [`win.KbType`](https://godoc.org/github.com/faiface/gui/win#KbType) (where `Wi`, `Mo`, and `Kb` stand for _window_, _mouse_, and _keyboard_, respectively). When we have an `Event`, we can type switch on it like this:
 
 ```go
-switch {
-case event.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-    // environment resized to (x0, y0, x1, y1)
-case event.Matches("wi/close"):
+switch event := event.(type) {
+case gui.Resize:
+    // environment resized to event.Rectangle
+case win.WiClose:
     // window closed
-case event.Matches("mo/move/%d/%d", &x, &y):
-    // mouse moved to (x, y)
-case event.Matches("mo/down/%d/%d/%s", &x, &y, &btn):
-    // mouse button pressed on (x, y)
-case event.Matches("mo/up/%d/%d/%s", &x, &y, &btn):
-	// mouse button released on (x, y)
-case event.Matches("mo/scroll/%d/%d", &x, &y):
-	// mouse scrolled by (x, y)
-case event.Matches("kb/type/%d", &r):
-    // rune r typed on the keyboard (encoded as a number in the event string)
-case event.Matches("kb/down/%s", &key):
-    // keyboard key pressed on the keyboard
-case event.Matches("kb/up/%s", &key):
-    // keyboard key released on the keyboard
-case event.Matches("kb/repeat/%s", &key):
-    // keyboard key repeated on the keyboard (happens when held)
+case win.MoMove:
+    // mouse moved to event.Point
+case win.MoDown:
+    // mouse button event.Button pressed on event.Point
+case win.MoUp:
+	// mouse button event.Button released on event.Point
+case win.MoScroll:
+	// mouse scrolled by event.Point
+case win.KbType:
+    // rune event.Rune typed on the keyboard
+case win.KbDown:
+    // keyboard key event.Key pressed on the keyboard
+case win.KbUp:
+    // keyboard key event.Key released on the keyboard
+case win.KbRepeat:
+    // keyboard key event.Key repeated on the keyboard (happens when held)
 }
 ```
 
-This shows all the possible events that a window can produce. You can find a little more info (especially on the keys) [here in GoDoc](https://godoc.org/github.com/faiface/gui/win#Win).
+This shows all the possible events that a window can produce.
 
-The `"resize"` event is not prefixed with `"wi/"`, because it's not specific to windows. It is also guaranteed to be the first event produced by any `Env`.
-
-You can also match only specific buttons/keys, or ignore them:
-
-```go
-switch {
-case event.Matches("mo/down/%d/%d/left", &x, &y):
-	// only matches when the left button is pressed
-case event.Matches("kb/down/up"):
-	// matches the UP key on the keyboard
-case event.Matches("mo/down/%d/%d", &x, &y):
-	// matches mouse press with any button
-}
-```
+The [`gui.Resize`](https://godoc.org/github.com/faiface/gui#Resize) event is not from the package [`win`](https://godoc.org/github.com/faiface/gui/win) because it's not window specific. In fact, every `Env` guarantees to produce `gui.Resize` as its first event.
 
 How do we create a window? With the [`"github.com/faiface/gui/win"`](https://godoc.org/github.com/faiface/gui/win) package:
 
@@ -180,8 +171,8 @@ func run() {
 	}
 
 	for event := range w.Events() {
-		switch {
-		case event.Matches("wi/close"):
+		switch event.(type) {
+		case win.WiClose:
 			close(w.Draw())
 		}
 	}
@@ -252,10 +243,9 @@ func Blinker(env gui.Env, r image.Rectangle) {
 	env.Draw() <- redraw(true)
 
 	for event := range env.Events() {
-		var x, y int
-		switch {
-		case event.Matches("mo/down/%d/%d", &x, &y):
-			if image.Pt(x, y).In(r) {
+		switch event := event.(type) {
+		case win.MoDown:
+			if event.Point.In(r) {
 				// user clicked on the rectangle
 				// we blink 3 times
 				for i := 0; i < 3; i++ {
@@ -287,8 +277,8 @@ func run() {
 
 	// we use the master env now, w is used by the mux
 	for event := range env.Events() {
-		switch {
-		case event.Matches("wi/close"):
+		switch event.(type) {
+		case win.WiClose:
 			close(env.Draw())
 		}
 	}
