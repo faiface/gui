@@ -333,6 +333,10 @@ env.Draw() <- redraw(pressed)
 // changing pressed here doesn't cause race conditions
 ```
 
+## Credit
+
+The cutest ever pictures are all drawn by Tori Bane! You can see more of her drawings and follow her on [Instagram here](https://www.instagram.com/teplomilka/).
+
 ## Licence
 
 [MIT](LICENCE)
