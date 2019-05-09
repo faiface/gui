@@ -91,7 +91,7 @@ type Event interface {
 
 This purpose of this interface is to hold different kinds of events and be able to discriminate among them using a type switch.
 
-Examples of concrete `Event` types strings are: [`gui.Resize`](https://godoc.org/github.com/faiface/gui#Resize), [`win.WiClose`](https://godoc.org/github.com/faiface/gui/win#WiClose), [`win.MoDown`](https://godoc.org/github.com/faiface/gui/win#MoDown), [`win.KbType`](https://godoc.org/github.com/faiface/gui/win#KbType) (where `Wi`, `Mo`, and `Kb` stand for _window_, _mouse_, and _keyboard_, respectively). When we have an `Event`, we can type switch on it like this:
+Examples of concrete `Event` types are: [`gui.Resize`](https://godoc.org/github.com/faiface/gui#Resize), [`win.WiClose`](https://godoc.org/github.com/faiface/gui/win#WiClose), [`win.MoDown`](https://godoc.org/github.com/faiface/gui/win#MoDown), [`win.KbType`](https://godoc.org/github.com/faiface/gui/win#KbType) (where `Wi`, `Mo`, and `Kb` stand for _window_, _mouse_, and _keyboard_, respectively). When we have an `Event`, we can type switch on it like this:
 
 ```go
 switch event := event.(type) {
