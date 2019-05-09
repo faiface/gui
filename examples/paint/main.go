@@ -18,10 +18,9 @@ func ColorPicker(env gui.Env, pick chan<- color.Color, r image.Rectangle, clr co
 	}
 
 	for event := range env.Events() {
-		var x, y int
-		switch {
-		case event.Matches("mo/down/%d/%d", &x, &y):
-			if image.Pt(x, y).In(r) {
+		switch event := event.(type) {
+		case win.MoDown:
+			if event.Point.In(r) {
 				pick <- clr
 			}
 		}
@@ -43,7 +42,7 @@ func Canvas(env gui.Env, pick <-chan color.Color, r image.Rectangle) {
 	var (
 		clr     = color.Color(color.Black)
 		pressed = false
-		px, py  = 0, 0
+		prev    image.Point
 	)
 
 	for {
@@ -56,21 +55,20 @@ func Canvas(env gui.Env, pick <-chan color.Color, r image.Rectangle) {
 				return
 			}
 
-			var x, y int
-			switch {
-			case event.Matches("mo/down/%d/%d", &x, &y):
-				if image.Pt(x, y).In(r) {
+			switch event := event.(type) {
+			case win.MoDown:
+				if event.Point.In(r) {
 					pressed = true
-					px, py = x, y
+					prev = event.Point
 				}
 
-			case event.Matches("mo/up/%d/%d", &x, &y):
+			case win.MoUp:
 				pressed = false
 
-			case event.Matches("mo/move/%d/%d", &x, &y):
+			case win.MoMove:
 				if pressed {
-					x0, y0, x1, y1 := px, py, x, y
-					px, py = x, y
+					x0, y0, x1, y1 := prev.X, prev.Y, event.X, event.Y
+					prev = event.Point
 
 					env.Draw() <- func(drw draw.Image) image.Rectangle {
 						dc.SetColor(clr)
@@ -118,8 +116,8 @@ func run() {
 	go Canvas(mux.MakeEnv(), pick, image.Rect(0, 0, 750, 600))
 
 	for event := range env.Events() {
-		switch {
-		case event.Matches("wi/close"):
+		switch event.(type) {
+		case win.WiClose:
 			close(env.Draw())
 		}
 	}

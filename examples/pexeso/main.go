@@ -68,10 +68,9 @@ func Tile(env gui.Env, pair chan PairMsg, r image.Rectangle, clr color.Color) {
 	env.Draw() <- redraw(1.0)
 
 	for event := range env.Events() {
-		var x, y int
-		switch {
-		case event.Matches("mo/down/%d/%d", &x, &y):
-			if image.Pt(x, y).In(r) {
+		switch event := event.(type) {
+		case win.MoDown:
+			if event.Point.In(r) {
 				for c := 32; c >= 0; c-- {
 					env.Draw() <- redraw(float64(c) / 32)
 					time.Sleep(time.Second / 32 / 4)
@@ -143,8 +142,8 @@ func run() {
 	}
 
 	for event := range env.Events() {
-		switch {
-		case event.Matches("wi/close"):
+		switch event.(type) {
+		case win.WiClose:
 			close(env.Draw())
 		}
 	}

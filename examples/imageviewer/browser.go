@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/faiface/gui"
+	"github.com/faiface/gui/win"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -111,21 +112,16 @@ func Browser(env gui.Env, theme *Theme, dir string, cd <-chan string, view chan<
 				return
 			}
 
-			var (
-				x0, y0, x1, y1 int
-				x, y           int
-			)
-
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-				r = image.Rect(x0, y0, x1, y1)
+			switch e := e.(type) {
+			case gui.Resize:
+				r = e.Rectangle
 				env.Draw() <- redraw(r, selected, position, lineHeight, namesImage)
 
-			case e.Matches("mo/down/%d/%d", &x, &y):
-				if !image.Pt(x, y).In(r) {
+			case win.MoDown:
+				if !e.Point.In(r) {
 					continue
 				}
-				click := image.Pt(x, y).Sub(r.Min).Add(position)
+				click := e.Point.Sub(r.Min).Add(position)
 				i := click.Y / lineHeight
 				if i < 0 || i >= len(names) {
 					continue
@@ -157,8 +153,8 @@ func Browser(env gui.Env, theme *Theme, dir string, cd <-chan string, view chan<
 					env.Draw() <- redraw(r, selected, position, lineHeight, namesImage)
 				}
 
-			case e.Matches("mo/scroll/%d/%d", &x, &y):
-				newP := position.Sub(image.Pt(int(x*16), int(y*16)))
+			case win.MoScroll:
+				newP := position.Sub(e.Point.Mul(16))
 				if newP.X > namesImage.Bounds().Max.X-r.Dx() {
 					newP.X = namesImage.Bounds().Max.X - r.Dx()
 				}

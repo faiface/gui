@@ -15,16 +15,15 @@ type envPair struct {
 func (ep *envPair) Events() <-chan gui.Event                      { return ep.events }
 func (ep *envPair) Draw() chan<- func(draw.Image) image.Rectangle { return ep.draw }
 
-func FixedLeft(env gui.Env, x1 int) gui.Env {
+func FixedLeft(env gui.Env, maxX int) gui.Env {
 	out, in := gui.MakeEventsChan()
 
 	go func() {
 		for e := range env.Events() {
-			var x0, y0, dummy, y1 int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &dummy, &y1):
-				in <- gui.Eventf("resize/%d/%d/%d/%d", x0, y0, x1, y1)
-			default:
+			if resize, ok := e.(gui.Resize); ok {
+				resize.Max.X = maxX
+				in <- resize
+			} else {
 				in <- e
 			}
 		}
@@ -34,16 +33,15 @@ func FixedLeft(env gui.Env, x1 int) gui.Env {
 	return &envPair{out, env.Draw()}
 }
 
-func FixedRight(env gui.Env, x0 int) gui.Env {
+func FixedRight(env gui.Env, minX int) gui.Env {
 	out, in := gui.MakeEventsChan()
 
 	go func() {
 		for e := range env.Events() {
-			var dummy, y0, x1, y1 int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &dummy, &y0, &x1, &y1):
-				in <- gui.Eventf("resize/%d/%d/%d/%d", x0, y0, x1, y1)
-			default:
+			if resize, ok := e.(gui.Resize); ok {
+				resize.Min.X = minX
+				in <- resize
+			} else {
 				in <- e
 			}
 		}
@@ -53,16 +51,15 @@ func FixedRight(env gui.Env, x0 int) gui.Env {
 	return &envPair{out, env.Draw()}
 }
 
-func FixedTop(env gui.Env, y1 int) gui.Env {
+func FixedTop(env gui.Env, maxY int) gui.Env {
 	out, in := gui.MakeEventsChan()
 
 	go func() {
 		for e := range env.Events() {
-			var x0, y0, x1, dummy int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &dummy):
-				in <- gui.Eventf("resize/%d/%d/%d/%d", x0, y0, x1, y1)
-			default:
+			if resize, ok := e.(gui.Resize); ok {
+				resize.Max.Y = maxY
+				in <- resize
+			} else {
 				in <- e
 			}
 		}
@@ -72,16 +69,15 @@ func FixedTop(env gui.Env, y1 int) gui.Env {
 	return &envPair{out, env.Draw()}
 }
 
-func FixedBottom(env gui.Env, y0 int) gui.Env {
+func FixedBottom(env gui.Env, minY int) gui.Env {
 	out, in := gui.MakeEventsChan()
 
 	go func() {
 		for e := range env.Events() {
-			var x0, dummy, x1, y1 int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &dummy, &x1, &y1):
-				in <- gui.Eventf("resize/%d/%d/%d/%d", x0, y0, x1, y1)
-			default:
+			if resize, ok := e.(gui.Resize); ok {
+				resize.Min.Y = minY
+				in <- resize
+			} else {
 				in <- e
 			}
 		}
@@ -96,12 +92,11 @@ func EvenHorizontal(env gui.Env, minI, maxI, n int) gui.Env {
 
 	go func() {
 		for e := range env.Events() {
-			var x0, y0, x1, y1 int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-				x0, x1 := x0+(x1-x0)*minI/n, x0+(x1-x0)*maxI/n
-				in <- gui.Eventf("resize/%d/%d/%d/%d", x0, y0, x1, y1)
-			default:
+			if resize, ok := e.(gui.Resize); ok {
+				x0, x1 := resize.Min.X, resize.Max.X
+				resize.Min.X, resize.Max.X = x0+(x1-x0)*minI/n, x0+(x1-x0)*maxI/n
+				in <- resize
+			} else {
 				in <- e
 			}
 		}

@@ -34,12 +34,10 @@ func NewMux(env Env) (mux *Mux, master Env) {
 
 	go func() {
 		for e := range env.Events() {
-			if e.Matches("resize/") {
-				mux.mu.Lock()
-				mux.lastResize = e
-				mux.mu.Unlock()
-			}
 			mux.mu.Lock()
+			if resize, ok := e.(Resize); ok {
+				mux.lastResize = resize
+			}
 			for _, eventsIn := range mux.eventsIns {
 				eventsIn <- e
 			}
@@ -79,7 +77,7 @@ func (mux *Mux) makeEnv(master bool) Env {
 	mux.eventsIns = append(mux.eventsIns, eventsIn)
 	// make sure to always send a resize event to a new Env if we got the size already
 	// that means it missed the resize event by the root Env
-	if mux.lastResize != "" {
+	if mux.lastResize != nil {
 		eventsIn <- mux.lastResize
 	}
 	mux.mu.Unlock()

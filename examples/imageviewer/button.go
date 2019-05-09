@@ -6,6 +6,7 @@ import (
 	"image/draw"
 
 	"github.com/faiface/gui"
+	"github.com/faiface/gui/win"
 )
 
 func Button(env gui.Env, theme *Theme, text string, action func()) {
@@ -34,23 +35,21 @@ func Button(env gui.Env, theme *Theme, text string, action func()) {
 	)
 
 	for e := range env.Events() {
-		var x, y, x0, y0, x1, y1 int
-
-		switch {
-		case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-			r = image.Rect(x0, y0, x1, y1)
+		switch e := e.(type) {
+		case gui.Resize:
+			r = e.Rectangle
 			env.Draw() <- redraw(r, over, pressed)
 
-		case e.Matches("mo/down/%d/%d/left", &x, &y):
-			newPressed := image.Pt(x, y).In(r)
+		case win.MoDown:
+			newPressed := e.Point.In(r)
 			if newPressed != pressed {
 				pressed = newPressed
 				env.Draw() <- redraw(r, over, pressed)
 			}
 
-		case e.Matches("mo/up/%d/%d/left", &x, &y):
+		case win.MoUp:
 			if pressed {
-				if image.Pt(x, y).In(r) {
+				if e.Point.In(r) {
 					action()
 				}
 				pressed = false

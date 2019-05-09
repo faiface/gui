@@ -1,59 +1,26 @@
 package gui
 
-import "fmt"
+import (
+	"fmt"
+	"image"
+)
 
-// Event is a string encoding of an event. This may sound dangerous at first, but
-// it enables nice pattern matching.
+// Event is something that can happen in an environment.
 //
-// Here are some examples of events (wi=window, mo=mouse, kb=keyboard):
-//
-//   wi/close
-//   mo/down/421/890
-//   kb/type/98
-//   resize/0/0/920/655
-//
-// As you can see, the common way is to form the event string like a file path,
-// from the most general information to the most specific. This allows pattern matching
-// the prefix of the event, while ignoring the rest.
-//
-// Here's how to pattern match on an event:
-//
-//   switch {
-//   case event.Matches("wi/close"):
-//       // window closed
-//   case event.Matches("mo/move/%d/%d", &x, &y):
-//       // mouse moved to (x, y)
-//       // mouse released on (x, y)
-//   case event.Matches("kb/type/%d", &r):
-//       // rune r typed on the keyboard (encoded as a number in the event string)
-//   case event.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-//       // environment resized to (x0, y0, x1, y1)
-//   }
-//
-// And here's how to pattern match on the prefix of an event:
-//
-//   switch {
-//   case event.Matches("mo/"):
-//       // this matches any mouse event
-//   case event.Matches("kb/"):
-//       // this matches any keyboard event
-//   }
-type Event string
-
-// Eventf forms a new event. It works the same as fmt.Sprintf, except the return type is Event.
-//
-// For example:
-//  Eventf("mo/down/%d/%d", x, y)
-func Eventf(format string, a ...interface{}) Event {
-	return Event(fmt.Sprintf(format, a...))
+// This package defines only one kind of event: Resize. Other packages implementing environments
+// may implement more kinds of events. For example, the win package implements all kinds of
+// events for mouse and keyboard.
+type Event interface {
+	String() string
 }
 
-// Matches works the same as fmt.Sscanf, but returns a bool telling whether the match
-// was successful. This makes it usable in a switch statement. See the doc for the Event
-// type for an example.
-func (e Event) Matches(format string, a ...interface{}) bool {
-	_, err := fmt.Sscanf(string(e), format, a...)
-	return err == nil
+// Resize is an event that happens when the environment changes the size of its drawing area.
+type Resize struct {
+	image.Rectangle
+}
+
+func (r Resize) String() string {
+	return fmt.Sprintf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 }
 
 // MakeEventsChan implements a channel of events with an unlimited capacity. It does so

@@ -53,11 +53,8 @@ func Viewer(env gui.Env, theme *Theme, view <-chan string) {
 				close(env.Draw())
 				return
 			}
-
-			var x0, y0, x1, y1 int
-			switch {
-			case e.Matches("resize/%d/%d/%d/%d", &x0, &y0, &x1, &y1):
-				r = image.Rect(x0, y0, x1, y1)
+			if resize, ok := e.(gui.Resize); ok {
+				r = resize.Rectangle
 				env.Draw() <- redraw(r, img)
 			}
 		}

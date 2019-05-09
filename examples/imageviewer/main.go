@@ -54,8 +54,8 @@ func run() {
 	})
 
 	for e := range env.Events() {
-		switch {
-		case e.Matches("wi/close"):
+		switch e.(type) {
+		case win.WiClose:
 			close(env.Draw())
 		}
 	}
