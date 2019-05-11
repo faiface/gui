@@ -20,8 +20,8 @@ type options struct {
 	title         string
 	width, height int
 	resizable     bool
-	borderless		bool
-	maximized			bool
+	borderless    bool
+	maximized     bool
 }
 
 // Title option sets the title (caption) of the window.
