@@ -53,8 +53,6 @@ func New(opts ...Option) (*Win, error) {
 		width:     640,
 		height:    480,
 		resizable: false,
-		borderless: false,
-		maximized: false,
 	}
 	for _, opt := range opts {
 		opt(&o)
