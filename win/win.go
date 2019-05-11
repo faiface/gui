@@ -80,9 +80,6 @@ func New(opts ...Option) (*Win, error) {
 		// hiDPI hack
 		width, _ := w.w.GetFramebufferSize()
 		w.ratio = width / o.width
-		if w.ratio < 1 {
-			w.ratio = 1
-		}
 		if w.ratio != 1 {
 			o.width /= w.ratio
 			o.height /= w.ratio
