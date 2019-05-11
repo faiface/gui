@@ -143,11 +143,11 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 		glfw.WindowHint(glfw.Maximized, glfw.True)
 	}
 	w, err := glfw.CreateWindow(o.width, o.height, o.title, nil, nil)
-	if o.maximized {
-		o.width, o.height = w.GetFramebufferSize() // set o.width and o.height to the window size due to the window being maximized
-	}
 	if err != nil {
 		return nil, err
+	}
+	if o.maximized {
+		o.width, o.height = w.GetFramebufferSize() // set o.width and o.height to the window size due to the window being maximized
 	}
 	return w, nil
 }
