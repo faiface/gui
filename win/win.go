@@ -46,14 +46,14 @@ func Resizable() Option {
 	}
 }
 
-//Borderless option makes the window borderless
+// Borderless option makes the window borderless.
 func Borderless() Option {
 	return func(o *options) {
 		o.borderless = true
 	}
 }
 
-//Maximized option makes the window start maximized
+// Maximized option makes the window start maximized.
 func Maximized() Option {
 	return func(o *options) {
 		o.maximized = true
@@ -65,12 +65,12 @@ func Maximized() Option {
 // The default title is empty and the default size is 640x480.
 func New(opts ...Option) (*Win, error) {
 	o := options{
-		title:     "",
-		width:     640,
-		height:    480,
-		resizable: false,
+		title:      "",
+		width:      640,
+		height:     480,
+		resizable:  false,
 		borderless: false,
-		maximized: false,
+		maximized:  false,
 	}
 	for _, opt := range opts {
 		opt(&o)
