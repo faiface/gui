@@ -20,6 +20,8 @@ type options struct {
 	title         string
 	width, height int
 	resizable     bool
+	borderless    bool
+	maximized     bool
 }
 
 // Title option sets the title (caption) of the window.
@@ -44,15 +46,31 @@ func Resizable() Option {
 	}
 }
 
+// Borderless option makes the window borderless.
+func Borderless() Option {
+	return func(o *options) {
+		o.borderless = true
+	}
+}
+
+// Maximized option makes the window start maximized.
+func Maximized() Option {
+	return func(o *options) {
+		o.maximized = true
+	}
+}
+
 // New creates a new window with all the supplied options.
 //
 // The default title is empty and the default size is 640x480.
 func New(opts ...Option) (*Win, error) {
 	o := options{
-		title:     "",
-		width:     640,
-		height:    480,
-		resizable: false,
+		title:      "",
+		width:      640,
+		height:     480,
+		resizable:  false,
+		borderless: false,
+		maximized:  false,
 	}
 	for _, opt := range opts {
 		opt(&o)
@@ -80,6 +98,9 @@ func New(opts ...Option) (*Win, error) {
 		// hiDPI hack
 		width, _ := w.w.GetFramebufferSize()
 		w.ratio = width / o.width
+		if w.ratio < 1 {
+			w.ratio = 1
+		}
 		if w.ratio != 1 {
 			o.width /= w.ratio
 			o.height /= w.ratio
@@ -115,9 +136,18 @@ func makeGLFWWin(o *options) (*glfw.Window, error) {
 	} else {
 		glfw.WindowHint(glfw.Resizable, glfw.False)
 	}
+	if o.borderless {
+		glfw.WindowHint(glfw.Decorated, glfw.False)
+	}
+	if o.maximized {
+		glfw.WindowHint(glfw.Maximized, glfw.True)
+	}
 	w, err := glfw.CreateWindow(o.width, o.height, o.title, nil, nil)
 	if err != nil {
 		return nil, err
+	}
+	if o.maximized {
+		o.width, o.height = w.GetFramebufferSize() // set o.width and o.height to the window size due to the window being maximized
 	}
 	return w, nil
 }
