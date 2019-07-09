@@ -8,28 +8,34 @@ import (
 	"github.com/faiface/gui"
 )
 
+// Mux can be used to multiplex an Env, let's call it a root Env. Mux implements a way to
+// create multiple virtual Envs that all interact with the root Env. They receive the same
+// events apart from gui.Resize, and their draw functions get redirected to the root Env.
+//
+// All gui.Resize events are instead modified according to the underlying Layout.
+// The master Env gets the original gui.Resize events.
 type Mux struct {
-	inEvent chan<- gui.Event
-
 	mu         sync.Mutex
 	lastResize gui.Event
 	eventsIns  []chan<- gui.Event
 	draw       chan<- func(draw.Image) image.Rectangle
 
-	Layout
+	evIn   chan<- gui.Event
+	layout Layout
 }
 
-func (m *Mux) InEvent() chan<- gui.Event { return m.inEvent }
-
+// NewMux should only be used internally by Layouts.
+// It has mostly the same behaviour as gui.Mux, except for its use of and underlying Layout
+// for modifying the gui.Resize events. to the childs.
 func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{
-		Layout: l,
+		layout: l,
 		draw:   drawChan,
 	}
-	master, mux.inEvent = mux.makeEnv(true)
-	mux.eventsIns = make([]chan<- gui.Event, 0)
-
+	master, masterIn := mux.makeEnv(true)
+	events := make(chan gui.Event, 0)
+	mux.evIn = events
 	go func() {
 		for d := range drawChan {
 			env.Draw() <- d
@@ -39,23 +45,33 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 
 	go func() {
 		for e := range env.Events() {
+			events <- e
+		}
+	}()
+
+	go func() {
+		for e := range events {
+			// master gets a copy of all events to the Mux
+			masterIn <- e
 			mux.mu.Lock()
 			if resize, ok := e.(gui.Resize); ok {
 				mux.lastResize = resize
+
 				rect := resize.Rectangle
 
 				// Redraw self
 				mux.draw <- func(drw draw.Image) image.Rectangle {
-					mux.Redraw(drw, rect)
+					mux.layout.Redraw(drw, rect)
 					return rect
 				}
 
 				// Send appropriate resize Events to childs
-				lay := mux.Lay(rect)
+				lay := mux.layout.Lay(rect)
 				for i, eventsIn := range mux.eventsIns {
 					resize.Rectangle = lay[i]
 					eventsIn <- resize
 				}
+
 			} else {
 				for _, eventsIn := range mux.eventsIns {
 					eventsIn <- e
@@ -72,6 +88,11 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	return
 }
 
+func (mux *Mux) MakeEnv() gui.Env {
+	env, _ := mux.makeEnv(false)
+	return env
+}
+
 type muxEnv struct {
 	events <-chan gui.Event
 	draw   chan<- func(draw.Image) image.Rectangle
@@ -80,16 +101,11 @@ type muxEnv struct {
 func (m *muxEnv) Events() <-chan gui.Event                      { return m.events }
 func (m *muxEnv) Draw() chan<- func(draw.Image) image.Rectangle { return m.draw }
 
-func (mux *Mux) MakeEnv() gui.Env {
-	env, _ := mux.makeEnv(false)
-	return env
-}
-
 // We do not store master env
-func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
+func (mux *Mux) makeEnv(master bool) (env gui.Env, eventsIn chan<- gui.Event) {
 	eventsOut, eventsIn := gui.MakeEventsChan()
 	drawChan := make(chan func(draw.Image) image.Rectangle)
-	env := &muxEnv{eventsOut, drawChan}
+	env = &muxEnv{eventsOut, drawChan}
 
 	if !master {
 		mux.mu.Lock()
@@ -133,7 +149,6 @@ func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
 				close(eventsIn)
 			}
 			mux.eventsIns = nil
-			close(mux.inEvent)
 			close(mux.draw)
 			mux.mu.Unlock()
 		} else {
@@ -147,10 +162,8 @@ func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
 			if i != -1 {
 				mux.eventsIns = append(mux.eventsIns[:i], mux.eventsIns[i+1:]...)
 			}
-			if mux.lastResize != nil {
-				mux.InEvent() <- mux.lastResize
-			}
 			mux.mu.Unlock()
+			mux.evIn <- mux.lastResize
 		}
 	}()
 

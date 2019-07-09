@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"log"
 
 	"github.com/faiface/gui"
 )
@@ -94,7 +93,5 @@ func (g *Box) Lay(bounds image.Rectangle) []image.Rectangle {
 			X += item + g.Gap
 		}
 	}
-
-	log.Print(ret)
 	return ret
 }

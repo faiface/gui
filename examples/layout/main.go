@@ -128,7 +128,7 @@ func run() {
 	)
 	go Blinker(b1)
 	go Blinker(b2)
-	layout.NewBox(
+	box := layout.NewBox(
 		b3,
 		[]*gui.Env{
 			&b4, &b5, &b6,
@@ -151,6 +151,13 @@ func run() {
 			return ret
 		}),
 	)
+	log.Print(box)
+	// go func() {
+	// 	for v := range box.Events() {
+	// 		log.Print("box: ", v)
+	// 	}
+	// }()
+
 	go Blinker(b4)
 	go Blinker(b5)
 	go Blinker(b6)
