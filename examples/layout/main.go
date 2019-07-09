@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/faiface/gui"
-	"github.com/faiface/gui/fixedgrid"
+	"github.com/faiface/gui/layout"
 	"github.com/faiface/gui/win"
 	"github.com/faiface/mainthread"
 	"golang.org/x/image/colornames"
@@ -81,39 +81,105 @@ func run() {
 		ButtonUp:   colornames.Lightgrey,
 		ButtonDown: colornames.Grey,
 	}
-	w, err := win.New(win.Title("gui test"),
-		win.Resizable(),
-	)
+	w, err := win.New(win.Title("gui test")) // win.Resizable(),
+
 	if err != nil {
 		panic(err)
 	}
 	mux, env := gui.NewMux(w)
-	gr := fixedgrid.New(mux.MakeEnv(),
-		fixedgrid.Rows(5),
-		fixedgrid.Columns(2),
-		fixedgrid.Gap(10),
+	var (
+		top                             gui.Env
+		left, right                     gui.Env
+		bottomLeft, bottom, bottomRight gui.Env
 	)
-	log.Print(gr)
-	go Blinker(gr.GetEnv("0;0"), false)
-	go Blinker(gr.GetEnv("0;1"), true)
-	go Blinker(gr.GetEnv("1;1"), false)
-	go Blinker(gr.GetEnv("0;2"), false)
-	go Blinker(gr.GetEnv("0;3"), false)
-	go Blinker(gr.GetEnv("0;4"), false)
-	sgr := fixedgrid.New(gr.GetEnv("1;0"),
-		fixedgrid.Columns(3),
-		fixedgrid.Gap(4),
-		fixedgrid.Background(colornames.Darkgrey),
+	layout.NewGrid(
+		mux.MakeEnv(),
+		[][]*gui.Env{
+			{&top},
+			{&left, &right},
+			{&bottomLeft, &bottom, &bottomRight},
+		},
+		layout.GridGap(10),
+		layout.GridBackground(colornames.Sandybrown),
+		layout.GridSplitY(func(els int, width int) []int {
+			ret := make([]int, els)
+			total := 0
+			for i := 0; i < els; i++ {
+				if i == els-1 {
+					ret[i] = width - total
+				} else {
+					v := (width - total) / 2
+					ret[i] = v
+					total += v
+				}
+			}
+			return ret
+		}),
 	)
-	go Button(sgr.GetEnv("0;0"), theme, "Hey", func() {
-		log.Print("hey")
-	})
-	go Button(sgr.GetEnv("1;0"), theme, "Ho", func() {
-		log.Print("ho")
-	})
-	go Button(sgr.GetEnv("2;0"), theme, "Hu", func() {
-		log.Print("hu")
-	})
+	go Blinker(right, false)
+	go Blinker(left, false)
+	go Blinker(bottomRight, false)
+
+	var (
+		b1, b2, b3, b4, b5, b6 gui.Env
+	)
+	layout.NewBox(
+		top,
+		[]*gui.Env{
+			&b1, &b2, &b3,
+		},
+		layout.BoxGap(10),
+		layout.BoxBackground(colornames.Lightblue),
+	)
+	go Blinker(b1, false)
+	go Blinker(b2, false)
+	layout.NewBox(
+		b3,
+		[]*gui.Env{
+			&b4, &b5, &b6,
+		},
+		layout.BoxVertical,
+		layout.BoxBackground(colornames.Pink),
+		layout.BoxGap(4),
+		layout.BoxSplit(func(els int, width int) []int {
+			ret := make([]int, els)
+			total := 0
+			for i := 0; i < els; i++ {
+				if i == els-1 {
+					ret[i] = width - total
+				} else {
+					v := (width - total) / 2
+					ret[i] = v
+					total += v
+				}
+			}
+			return ret
+		}),
+	)
+	go Blinker(b4, false)
+	go Blinker(b5, false)
+	go Blinker(b6, false)
+
+	var (
+		btn1, btn2, btn3 gui.Env
+	)
+	layout.NewGrid(
+		bottom,
+		[][]*gui.Env{
+			{&btn1, &btn2, &btn3},
+		},
+		layout.GridGap(4),
+		layout.GridBackground(colornames.Darkgrey),
+	)
+	btn := func(env gui.Env, name string) {
+		Button(env, theme, name, func() {
+			log.Print(name)
+		})
+	}
+	go btn(btn1, "Hey")
+	go btn(btn2, "Ho")
+	go btn(btn3, "Hu")
+
 	// we use the master env now, w is used by the mux
 	for event := range env.Events() {
 		switch event.(type) {
