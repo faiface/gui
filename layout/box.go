@@ -33,7 +33,7 @@ type Box struct {
 	vertical bool
 }
 
-func NewBox(env gui.Env, contents []*gui.Env, options ...func(*Box)) {
+func NewBox(env gui.Env, contents []*gui.Env, options ...func(*Box)) gui.Env {
 	ret := &Box{
 		Background: image.Black,
 		Contents:   contents,
@@ -43,10 +43,11 @@ func NewBox(env gui.Env, contents []*gui.Env, options ...func(*Box)) {
 		f(ret)
 	}
 
-	mux := NewMux(env, ret)
+	mux, env := NewMux(env, ret)
 	for _, item := range contents {
-		*item, _ = mux.makeEnv(false)
+		*item = mux.MakeEnv()
 	}
+	return env
 }
 
 func BoxVertical(b *Box) {

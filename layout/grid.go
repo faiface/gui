@@ -18,7 +18,7 @@ type Grid struct {
 	SplitY     func(int, int) []int
 }
 
-func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*Grid)) {
+func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*Grid)) gui.Env {
 	ret := &Grid{
 		Background: image.Black,
 		Gap:        0,
@@ -30,12 +30,14 @@ func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*Grid)) {
 		f(ret)
 	}
 
-	mux := NewMux(env, ret)
+	mux, env := NewMux(env, ret)
 	for _, row := range contents {
 		for _, item := range row {
-			*item, _ = mux.makeEnv(false)
+			*item = mux.MakeEnv()
 		}
 	}
+
+	return env
 }
 
 func GridBackground(c color.Color) func(*Grid) {

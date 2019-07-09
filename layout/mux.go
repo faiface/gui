@@ -9,8 +9,7 @@ import (
 )
 
 type Mux struct {
-	masterEnv *muxEnv
-	inEvent   chan<- gui.Event
+	inEvent chan<- gui.Event
 
 	mu         sync.Mutex
 	lastResize gui.Event
@@ -20,13 +19,15 @@ type Mux struct {
 	Layout
 }
 
-func NewMux(env gui.Env, l Layout) (mux *Mux) {
+func (m *Mux) InEvent() chan<- gui.Event { return m.inEvent }
+
+func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{
 		Layout: l,
 		draw:   drawChan,
 	}
-	mux.masterEnv, mux.inEvent = mux.makeEnv(true)
+	master, mux.inEvent = mux.makeEnv(true)
 	mux.eventsIns = make([]chan<- gui.Event, 0)
 
 	go func() {
@@ -68,8 +69,7 @@ func NewMux(env gui.Env, l Layout) (mux *Mux) {
 		}
 		mux.mu.Unlock()
 	}()
-
-	return mux
+	return
 }
 
 type muxEnv struct {
@@ -80,20 +80,27 @@ type muxEnv struct {
 func (m *muxEnv) Events() <-chan gui.Event                      { return m.events }
 func (m *muxEnv) Draw() chan<- func(draw.Image) image.Rectangle { return m.draw }
 
+func (mux *Mux) MakeEnv() gui.Env {
+	env, _ := mux.makeEnv(false)
+	return env
+}
+
 // We do not store master env
 func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
 	eventsOut, eventsIn := gui.MakeEventsChan()
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	env := &muxEnv{eventsOut, drawChan}
 
-	mux.mu.Lock()
-	mux.eventsIns = append(mux.eventsIns, eventsIn)
-	// make sure to always send a resize event to a new Env if we got the size already
-	// that means it missed the resize event by the root Env
-	if mux.lastResize != nil {
-		eventsIn <- mux.lastResize
+	if !master {
+		mux.mu.Lock()
+		mux.eventsIns = append(mux.eventsIns, eventsIn)
+		// make sure to always send a resize event to a new Env if we got the size already
+		// that means it missed the resize event by the root Env
+		if mux.lastResize != nil {
+			eventsIn <- mux.lastResize
+		}
+		mux.mu.Unlock()
 	}
-	mux.mu.Unlock()
 
 	go func() {
 		func() {
@@ -126,6 +133,7 @@ func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
 				close(eventsIn)
 			}
 			mux.eventsIns = nil
+			close(mux.inEvent)
 			close(mux.draw)
 			mux.mu.Unlock()
 		} else {
@@ -139,10 +147,10 @@ func (mux *Mux) makeEnv(master bool) (*muxEnv, chan<- gui.Event) {
 			if i != -1 {
 				mux.eventsIns = append(mux.eventsIns[:i], mux.eventsIns[i+1:]...)
 			}
+			if mux.lastResize != nil {
+				mux.InEvent() <- mux.lastResize
+			}
 			mux.mu.Unlock()
-		}
-		if mux.lastResize != nil {
-			mux.inEvent <- mux.lastResize
 		}
 	}()
 

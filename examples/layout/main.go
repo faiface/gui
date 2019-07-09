@@ -14,7 +14,7 @@ import (
 	"golang.org/x/image/font/gofont/goregular"
 )
 
-func Blinker(env gui.Env, closed bool) {
+func Blinker(env gui.Env) {
 	defer func() {
 		if recover() != nil {
 			log.Print("recovered blinker")
@@ -23,7 +23,7 @@ func Blinker(env gui.Env, closed bool) {
 
 	var r image.Rectangle
 	var visible bool = true
-	// redraw takes a bool and produces a draw command
+
 	redraw := func() func(draw.Image) image.Rectangle {
 		return func(drw draw.Image) image.Rectangle {
 			if visible {
@@ -37,7 +37,7 @@ func Blinker(env gui.Env, closed bool) {
 
 	// first we draw a white rectangle
 	env.Draw() <- redraw()
-	go func() {
+	func() {
 		for event := range env.Events() {
 			switch event := event.(type) {
 			case win.MoDown:
@@ -60,11 +60,6 @@ func Blinker(env gui.Env, closed bool) {
 			}
 		}
 	}()
-
-	if closed {
-		time.Sleep(time.Second * 1)
-		close(env.Draw())
-	}
 }
 
 func run() {
@@ -116,9 +111,9 @@ func run() {
 			return ret
 		}),
 	)
-	go Blinker(right, false)
-	go Blinker(left, false)
-	go Blinker(bottomRight, false)
+	go Blinker(right)
+	go Blinker(left)
+	go Blinker(bottomRight)
 
 	var (
 		b1, b2, b3, b4, b5, b6 gui.Env
@@ -131,8 +126,8 @@ func run() {
 		layout.BoxGap(10),
 		layout.BoxBackground(colornames.Lightblue),
 	)
-	go Blinker(b1, false)
-	go Blinker(b2, false)
+	go Blinker(b1)
+	go Blinker(b2)
 	layout.NewBox(
 		b3,
 		[]*gui.Env{
@@ -156,9 +151,9 @@ func run() {
 			return ret
 		}),
 	)
-	go Blinker(b4, false)
-	go Blinker(b5, false)
-	go Blinker(b6, false)
+	go Blinker(b4)
+	go Blinker(b5)
+	go Blinker(b6)
 
 	var (
 		btn1, btn2, btn3 gui.Env
