@@ -8,23 +8,23 @@ import (
 	"github.com/faiface/gui"
 )
 
-// Grid represents a simple grid layout.
-// Do not edit properties directly, use the constructor instead.
-type Grid struct {
+type grid struct {
 	Contents   [][]*gui.Env
 	Background color.Color
 	Gap        int
-	SplitX     func(int, int) []int
-	SplitY     func(int, int) []int
+	SplitX     SplitFunc
+	SplitY     SplitFunc
 }
 
-func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*Grid)) gui.Env {
-	ret := &Grid{
+// NewGrid creates a familiar flexbox-like grid layout.
+// Each row can be a different length.
+func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*grid)) gui.Env {
+	ret := &grid{
 		Background: image.Black,
 		Gap:        0,
 		Contents:   contents,
-		SplitX:     evenSplit,
-		SplitY:     evenSplit,
+		SplitX:     EvenSplit,
+		SplitY:     EvenSplit,
 	}
 	for _, f := range options {
 		f(ret)
@@ -40,35 +40,40 @@ func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*Grid)) gui.Env
 	return env
 }
 
-func GridBackground(c color.Color) func(*Grid) {
-	return func(grid *Grid) {
+// GridBackground changes the background of the grid to a uniform color.
+func GridBackground(c color.Color) func(*grid) {
+	return func(grid *grid) {
 		grid.Background = c
 	}
 }
 
-func GridGap(g int) func(*Grid) {
-	return func(grid *Grid) {
+// GridGap changes the grid gap.
+// The gap is identical everywhere (top, left, bottom, right).
+func GridGap(g int) func(*grid) {
+	return func(grid *grid) {
 		grid.Gap = g
 	}
 }
 
-func GridSplitX(split func(int, int) []int) func(*Grid) {
-	return func(grid *Grid) {
+// GridSplitX changes the way the space is divided among the columns in each row.
+func GridSplitX(split SplitFunc) func(*grid) {
+	return func(grid *grid) {
 		grid.SplitX = split
 	}
 }
 
-func GridSplitY(split func(int, int) []int) func(*Grid) {
-	return func(grid *Grid) {
+// GridSplitY changes the way the space is divided among the rows.
+func GridSplitY(split SplitFunc) func(*grid) {
+	return func(grid *grid) {
 		grid.SplitY = split
 	}
 }
 
-func (g *Grid) Redraw(drw draw.Image, bounds image.Rectangle) {
+func (g *grid) Redraw(drw draw.Image, bounds image.Rectangle) {
 	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
 }
 
-func (g *Grid) Lay(bounds image.Rectangle) []image.Rectangle {
+func (g *grid) Lay(bounds image.Rectangle) []image.Rectangle {
 	gap := g.Gap
 	ret := make([]image.Rectangle, 0)
 	rows := len(g.Contents)

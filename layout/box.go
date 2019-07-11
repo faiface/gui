@@ -8,35 +8,22 @@ import (
 	"github.com/faiface/gui"
 )
 
-func evenSplit(elements int, width int) []int {
-	ret := make([]int, 0, elements)
-	for elements > 0 {
-		v := width / elements
-		width -= v
-		elements -= 1
-		ret = append(ret, v)
-	}
-	return ret
-}
-
-type Box struct {
-	// Defaults to []*gui.Env{}
-	Contents []*gui.Env
-	// Defaults to image.Black
+type box struct {
+	Contents   []*gui.Env
 	Background color.Color
-	// Defaults to an even split
-	Split func(int, int) []int
-	// Defaults to 0
-	Gap int
+	Split      SplitFunc
+	Gap        int
 
 	vertical bool
 }
 
-func NewBox(env gui.Env, contents []*gui.Env, options ...func(*Box)) gui.Env {
-	ret := &Box{
+// NewBox creates a familiar flexbox-like list layout.
+// It can be horizontal or vertical.
+func NewBox(env gui.Env, contents []*gui.Env, options ...func(*box)) gui.Env {
+	ret := &box{
 		Background: image.Black,
 		Contents:   contents,
-		Split:      evenSplit,
+		Split:      EvenSplit,
 	}
 	for _, f := range options {
 		f(ret)
@@ -49,33 +36,38 @@ func NewBox(env gui.Env, contents []*gui.Env, options ...func(*Box)) gui.Env {
 	return env
 }
 
-func BoxVertical(b *Box) {
+// BoxVertical changes the otherwise horizontal Box to be vertical.
+func BoxVertical(b *box) {
 	b.vertical = true
 }
 
-func BoxBackground(c color.Color) func(*Box) {
-	return func(grid *Box) {
+// BoxBackground changes the background of the box to a uniform color.
+func BoxBackground(c color.Color) func(*box) {
+	return func(grid *box) {
 		grid.Background = c
 	}
 }
 
-func BoxSplit(split func(int, int) []int) func(*Box) {
-	return func(grid *Box) {
+// BoxSplit changes the way the space is divided among the elements.
+func BoxSplit(split SplitFunc) func(*box) {
+	return func(grid *box) {
 		grid.Split = split
 	}
 }
 
-func BoxGap(gap int) func(*Box) {
-	return func(grid *Box) {
+// BoxGap changes the box gap.
+// The gap is identical everywhere (top, left, bottom, right).
+func BoxGap(gap int) func(*box) {
+	return func(grid *box) {
 		grid.Gap = gap
 	}
 }
 
-func (g *Box) Redraw(drw draw.Image, bounds image.Rectangle) {
+func (g *box) Redraw(drw draw.Image, bounds image.Rectangle) {
 	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
 }
 
-func (g *Box) Lay(bounds image.Rectangle) []image.Rectangle {
+func (g *box) Lay(bounds image.Rectangle) []image.Rectangle {
 	items := len(g.Contents)
 	ret := make([]image.Rectangle, 0, items)
 	if g.vertical {
