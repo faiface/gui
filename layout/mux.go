@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 	"sync"
@@ -24,9 +25,15 @@ type Mux struct {
 	layout Layout
 }
 
+// Layout returns the underlying Layout of the Mux.
+func (mux *Mux) Layout() Layout {
+	return mux.layout
+}
+
 // NewMux should only be used internally by Layouts.
-// It has mostly the same behaviour as gui.Mux, except for its use of and underlying Layout
-// for modifying the gui.Resize events. to the childs.
+// It has mostly the same behaviour as gui.Mux, except for its use of an underlying Layout
+// for modifying the gui.Resize events sent to the childs.
+// Also, you cannot make Envs manually, you must use FillLayout.
 func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{
@@ -34,7 +41,7 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 		draw:   drawChan,
 	}
 	master, masterIn := mux.makeEnv(true)
-	events := make(chan gui.Event, 0)
+	events := make(chan gui.Event)
 	mux.evIn = events
 	go func() {
 		for d := range drawChan {
@@ -85,12 +92,36 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 		}
 		mux.mu.Unlock()
 	}()
+
+	err := mux.FillLayout()
+	if err != nil {
+		panic(err)
+	}
 	return
 }
 
-func (mux *Mux) MakeEnv() gui.Env {
-	env, _ := mux.makeEnv(false)
-	return env
+// FillLayout uses the mux to fill the Layout's Envs with suitable Envs.
+// It's called automatically on NewMux, but you can call it again to fill
+// the Envs that became nil, to change a child in the Layout.
+func (mux *Mux) FillLayout() error {
+	nilptrs := 0
+	filleditems := 0
+	// err
+	for _, en := range mux.layout.Items() {
+		if en == nil {
+			nilptrs += 1
+			continue
+		}
+		if *en != nil {
+			filleditems += 1
+			continue
+		}
+		*en, _ = mux.makeEnv(false)
+	}
+	if nilptrs > 0 {
+		return fmt.Errorf("Mux: %d already filled and %d nil pointers", filleditems, nilptrs)
+	}
+	return nil
 }
 
 type muxEnv struct {

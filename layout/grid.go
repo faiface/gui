@@ -18,7 +18,7 @@ type grid struct {
 
 // NewGrid creates a familiar flexbox-like grid layout.
 // Each row can be a different length.
-func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*grid)) gui.Env {
+func NewGrid(contents [][]*gui.Env, options ...func(*grid)) Layout {
 	ret := &grid{
 		Background: image.Black,
 		Gap:        0,
@@ -29,15 +29,7 @@ func NewGrid(env gui.Env, contents [][]*gui.Env, options ...func(*grid)) gui.Env
 	for _, f := range options {
 		f(ret)
 	}
-
-	mux, env := NewMux(env, ret)
-	for _, row := range contents {
-		for _, item := range row {
-			*item = mux.MakeEnv()
-		}
-	}
-
-	return env
+	return ret
 }
 
 // GridBackground changes the background of the grid to a uniform color.
@@ -71,6 +63,15 @@ func GridSplitY(split SplitFunc) func(*grid) {
 
 func (g *grid) Redraw(drw draw.Image, bounds image.Rectangle) {
 	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
+}
+
+func (g *grid) Items() []*gui.Env {
+	// 32 should be more than enough for most grids
+	ret := make([]*gui.Env, 0, 32)
+	for _, row := range g.Contents {
+		ret = append(ret, row...)
+	}
+	return ret
 }
 
 func (g *grid) Lay(bounds image.Rectangle) []image.Rectangle {

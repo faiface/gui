@@ -1,10 +1,7 @@
 package main
 
 import (
-	"image"
-	"image/draw"
 	"log"
-	"time"
 
 	"github.com/faiface/gui"
 	"github.com/faiface/gui/layout"
@@ -13,54 +10,6 @@ import (
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font/gofont/goregular"
 )
-
-func Blinker(env gui.Env) {
-	defer func() {
-		if recover() != nil {
-			log.Print("recovered blinker")
-		}
-	}()
-
-	var r image.Rectangle
-	var visible bool = true
-
-	redraw := func() func(draw.Image) image.Rectangle {
-		return func(drw draw.Image) image.Rectangle {
-			if visible {
-				draw.Draw(drw, r, image.White, image.ZP, draw.Src)
-			} else {
-				draw.Draw(drw, r, &image.Uniform{colornames.Firebrick}, image.ZP, draw.Src)
-			}
-			return r
-		}
-	}
-
-	// first we draw a white rectangle
-	env.Draw() <- redraw()
-	func() {
-		for event := range env.Events() {
-			switch event := event.(type) {
-			case win.MoDown:
-				if event.Point.In(r) {
-					go func() {
-						for i := 0; i < 3; i++ {
-							visible = false
-							env.Draw() <- redraw()
-							time.Sleep(time.Second / 3)
-							visible = true
-							env.Draw() <- redraw()
-							time.Sleep(time.Second / 3)
-						}
-					}()
-				}
-			case gui.Resize:
-				log.Print(event)
-				r = event.Rectangle
-				env.Draw() <- redraw()
-			}
-		}
-	}()
-}
 
 func run() {
 	face, err := TTFToFace(goregular.TTF, 18)
@@ -77,39 +26,41 @@ func run() {
 		ButtonDown: colornames.Grey,
 	}
 	w, err := win.New(win.Title("gui test")) // win.Resizable(),
-
 	if err != nil {
 		panic(err)
 	}
+
 	mux, env := gui.NewMux(w)
 	var (
 		top                             gui.Env
 		left, right                     gui.Env
 		bottomLeft, bottom, bottomRight gui.Env
 	)
-	layout.NewGrid(
+	layout.NewMux(
 		mux.MakeEnv(),
-		[][]*gui.Env{
-			{&top},
-			{&left, &right},
-			{&bottomLeft, &bottom, &bottomRight},
-		},
-		layout.GridGap(10),
-		layout.GridBackground(colornames.Sandybrown),
-		layout.GridSplitY(func(els int, width int) []int {
-			ret := make([]int, els)
-			total := 0
-			for i := 0; i < els; i++ {
-				if i == els-1 {
-					ret[i] = width - total
-				} else {
-					v := (width - total) / 2
-					ret[i] = v
-					total += v
+		layout.NewGrid(
+			[][]*gui.Env{
+				{&top},
+				{&left, &right},
+				{&bottomLeft, &bottom, &bottomRight},
+			},
+			layout.GridGap(10),
+			layout.GridBackground(colornames.Sandybrown),
+			layout.GridSplitY(func(els int, width int) []int {
+				ret := make([]int, els)
+				total := 0
+				for i := 0; i < els; i++ {
+					if i == els-1 {
+						ret[i] = width - total
+					} else {
+						v := (width - total) / 2
+						ret[i] = v
+						total += v
+					}
 				}
-			}
-			return ret
-		}),
+				return ret
+			}),
+		),
 	)
 	go Blinker(right)
 	go Blinker(left)
@@ -118,18 +69,18 @@ func run() {
 	var (
 		b1, b2, b3, b4, b5, b6 gui.Env
 	)
-	layout.NewBox(
-		top,
-		[]*gui.Env{
-			&b1, &b2, &b3,
-		},
-		layout.BoxGap(10),
-		layout.BoxBackground(colornames.Lightblue),
+	layout.NewMux(top,
+		layout.NewBox(
+			[]*gui.Env{
+				&b1, &b2, &b3,
+			},
+			layout.BoxGap(10),
+			layout.BoxBackground(colornames.Lightblue),
+		),
 	)
 	go Blinker(b1)
 	go Blinker(b2)
 	box := layout.NewBox(
-		b3,
 		[]*gui.Env{
 			&b4, &b5, &b6,
 		},
@@ -139,24 +90,17 @@ func run() {
 		layout.BoxSplit(func(els int, width int) []int {
 			ret := make([]int, els)
 			total := 0
-			for i := 0; i < els; i++ {
-				if i == els-1 {
-					ret[i] = width - total
-				} else {
-					v := (width - total) / 2
-					ret[i] = v
-					total += v
-				}
+			for i := 0; i < els-1; i++ {
+				v := (width - total) / 2
+				ret[i] = v
+				total += v
 			}
+			ret[els-1] = width - total
 			return ret
 		}),
 	)
+	layout.NewMux(b3, box)
 	log.Print(box)
-	// go func() {
-	// 	for v := range box.Events() {
-	// 		log.Print("box: ", v)
-	// 	}
-	// }()
 
 	go Blinker(b4)
 	go Blinker(b5)
@@ -165,13 +109,15 @@ func run() {
 	var (
 		btn1, btn2, btn3 gui.Env
 	)
-	layout.NewGrid(
+	layout.NewMux(
 		bottom,
-		[][]*gui.Env{
-			{&btn1, &btn2, &btn3},
-		},
-		layout.GridGap(4),
-		layout.GridBackground(colornames.Darkgrey),
+		layout.NewGrid(
+			[][]*gui.Env{
+				{&btn1, &btn2, &btn3},
+			},
+			layout.GridGap(4),
+			layout.GridBackground(colornames.Darkgrey),
+		),
 	)
 	btn := func(env gui.Env, name string) {
 		Button(env, theme, name, func() {

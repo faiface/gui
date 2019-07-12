@@ -19,7 +19,7 @@ type box struct {
 
 // NewBox creates a familiar flexbox-like list layout.
 // It can be horizontal or vertical.
-func NewBox(env gui.Env, contents []*gui.Env, options ...func(*box)) gui.Env {
+func NewBox(contents []*gui.Env, options ...func(*box)) Layout {
 	ret := &box{
 		Background: image.Black,
 		Contents:   contents,
@@ -28,12 +28,7 @@ func NewBox(env gui.Env, contents []*gui.Env, options ...func(*box)) gui.Env {
 	for _, f := range options {
 		f(ret)
 	}
-
-	mux, env := NewMux(env, ret)
-	for _, item := range contents {
-		*item = mux.MakeEnv()
-	}
-	return env
+	return ret
 }
 
 // BoxVertical changes the otherwise horizontal Box to be vertical.
@@ -65,6 +60,10 @@ func BoxGap(gap int) func(*box) {
 
 func (g *box) Redraw(drw draw.Image, bounds image.Rectangle) {
 	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
+}
+
+func (g *box) Items() []*gui.Env {
+	return g.Contents
 }
 
 func (g *box) Lay(bounds image.Rectangle) []image.Rectangle {
