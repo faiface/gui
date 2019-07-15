@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"log"
 
 	"github.com/faiface/gui"
 	"github.com/faiface/gui/win"
@@ -39,7 +38,6 @@ func Button(env gui.Env, theme *Theme, text string, action func()) {
 		switch e := e.(type) {
 		case gui.Resize:
 			r = e.Rectangle
-			log.Print("button ", e)
 			env.Draw() <- redraw(r, over, pressed)
 
 		case win.MoDown:

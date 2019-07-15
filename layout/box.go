@@ -4,84 +4,53 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-
-	"github.com/faiface/gui"
 )
 
-type box struct {
-	Contents   []*gui.Env
+type Box struct {
+	// Number of child elements
+	Length int
+	// Background changes the background of the Box to a uniform color.
 	Background color.Color
-	Split      SplitFunc
-	Gap        int
+	// Split changes the way the space is divided among the elements.
+	Split SplitFunc
+	// Gap changes the Box gap.
+	// The gap is identical everywhere (top, left, bottom, right).
+	Gap int
 
-	vertical bool
+	// Vertical changes the otherwise horizontal Box to be vertical.
+	Vertical bool
 }
 
-// NewBox creates a familiar flexbox-like list layout.
-// It can be horizontal or vertical.
-func NewBox(contents []*gui.Env, options ...func(*box)) Layout {
-	ret := &box{
-		Background: image.Black,
-		Contents:   contents,
-		Split:      EvenSplit,
+func (b Box) Redraw(drw draw.Image, bounds image.Rectangle) {
+	col := b.Background
+	if col == nil {
+		col = image.Black
 	}
-	for _, f := range options {
-		f(ret)
+
+	draw.Draw(drw, bounds, image.NewUniform(col), image.ZP, draw.Src)
+}
+
+func (b Box) Lay(bounds image.Rectangle) []image.Rectangle {
+	items := b.Length
+	gap := b.Gap
+	split := b.Split
+	if split == nil {
+		split = EvenSplit
 	}
-	return ret
-}
-
-// BoxVertical changes the otherwise horizontal Box to be vertical.
-func BoxVertical(b *box) {
-	b.vertical = true
-}
-
-// BoxBackground changes the background of the box to a uniform color.
-func BoxBackground(c color.Color) func(*box) {
-	return func(grid *box) {
-		grid.Background = c
-	}
-}
-
-// BoxSplit changes the way the space is divided among the elements.
-func BoxSplit(split SplitFunc) func(*box) {
-	return func(grid *box) {
-		grid.Split = split
-	}
-}
-
-// BoxGap changes the box gap.
-// The gap is identical everywhere (top, left, bottom, right).
-func BoxGap(gap int) func(*box) {
-	return func(grid *box) {
-		grid.Gap = gap
-	}
-}
-
-func (g *box) Redraw(drw draw.Image, bounds image.Rectangle) {
-	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
-}
-
-func (g *box) Items() []*gui.Env {
-	return g.Contents
-}
-
-func (g *box) Lay(bounds image.Rectangle) []image.Rectangle {
-	items := len(g.Contents)
 	ret := make([]image.Rectangle, 0, items)
-	if g.vertical {
-		spl := g.Split(items, bounds.Dy()-(g.Gap*(items+1)))
-		Y := bounds.Min.Y + g.Gap
+	if b.Vertical {
+		spl := split(items, bounds.Dy()-(gap*(items+1)))
+		Y := bounds.Min.Y + gap
 		for _, item := range spl {
-			ret = append(ret, image.Rect(bounds.Min.X+g.Gap, Y, bounds.Max.X-g.Gap, Y+item))
-			Y += item + g.Gap
+			ret = append(ret, image.Rect(bounds.Min.X+gap, Y, bounds.Max.X-gap, Y+item))
+			Y += item + gap
 		}
 	} else {
-		spl := g.Split(items, bounds.Dx()-(g.Gap*(items+1)))
-		X := bounds.Min.X + g.Gap
+		spl := split(items, bounds.Dx()-(gap*(items+1)))
+		X := bounds.Min.X + gap
 		for _, item := range spl {
-			ret = append(ret, image.Rect(X, bounds.Min.Y+g.Gap, X+item, bounds.Max.Y-g.Gap))
-			X += item + g.Gap
+			ret = append(ret, image.Rect(X, bounds.Min.Y+gap, X+item, bounds.Max.Y-gap))
+			X += item + gap
 		}
 	}
 	return ret

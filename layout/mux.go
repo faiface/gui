@@ -1,9 +1,9 @@
 package layout
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
+	"log"
 	"sync"
 
 	"github.com/faiface/gui"
@@ -33,8 +33,7 @@ func (mux *Mux) Layout() Layout {
 // NewMux should only be used internally by Layouts.
 // It has mostly the same behaviour as gui.Mux, except for its use of an underlying Layout
 // for modifying the gui.Resize events sent to the childs.
-// Also, you cannot make Envs manually, you must use FillLayout.
-func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
+func NewMux(env gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{
 		layout: l,
@@ -63,6 +62,12 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 			mux.mu.Lock()
 			if resize, ok := e.(gui.Resize); ok {
 				mux.lastResize = resize
+				lay := mux.layout.Lay(rect)
+				if len(lay) != len(mux.eventsIns) {
+					log.Printf("Lay of %T has %d elements while mux has %d, skipping\n", l, len(lay), len(envs))
+					mux.mu.Unlock()
+					continue
+				}
 
 				rect := resize.Rectangle
 
@@ -73,7 +78,6 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 				}
 
 				// Send appropriate resize Events to childs
-				lay := mux.layout.Lay(rect)
 				for i, eventsIn := range mux.eventsIns {
 					resize.Rectangle = lay[i]
 					eventsIn <- resize
@@ -93,35 +97,10 @@ func NewMux(env gui.Env, l Layout) (mux *Mux, master gui.Env) {
 		mux.mu.Unlock()
 	}()
 
-	err := mux.FillLayout()
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// FillLayout uses the mux to fill the Layout's Envs with suitable Envs.
-// It's called automatically on NewMux, but you can call it again to fill
-// the Envs that became nil, to change a child in the Layout.
-func (mux *Mux) FillLayout() error {
-	nilptrs := 0
-	filleditems := 0
-	// err
-	for _, en := range mux.layout.Items() {
-		if en == nil {
-			nilptrs += 1
-			continue
-		}
-		if *en != nil {
-			filleditems += 1
-			continue
-		}
+	for _, en := range envs {
 		*en, _ = mux.makeEnv(false)
 	}
-	if nilptrs > 0 {
-		return fmt.Errorf("Mux: %d already filled and %d nil pointers", filleditems, nilptrs)
-	}
-	return nil
+	return
 }
 
 type muxEnv struct {

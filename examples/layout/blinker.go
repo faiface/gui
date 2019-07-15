@@ -51,7 +51,6 @@ func Blinker(env gui.Env) {
 					}()
 				}
 			case gui.Resize:
-				log.Print(event)
 				r = event.Rectangle
 				env.Draw() <- redraw()
 			}

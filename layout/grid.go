@@ -4,92 +4,50 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-
-	"github.com/faiface/gui"
 )
 
-type grid struct {
-	Contents   [][]*gui.Env
+type Grid struct {
+	// Rows represents the number of childs of each row.
+	Rows []int
+	// Background represents the background of the grid as a uniform color.
 	Background color.Color
-	Gap        int
-	SplitX     SplitFunc
-	SplitY     SplitFunc
+	// Gap represents the grid gap, equal on all sides.
+	Gap int
+	// SplitX represents the way the space is divided among the columns in each row.
+	SplitX SplitFunc
+	// SplitY represents the way the space is divided among the rows.
+	SplitY SplitFunc
 }
 
-// NewGrid creates a familiar flexbox-like grid layout.
-// Each row can be a different length.
-func NewGrid(contents [][]*gui.Env, options ...func(*grid)) Layout {
-	ret := &grid{
-		Background: image.Black,
-		Gap:        0,
-		Contents:   contents,
-		SplitX:     EvenSplit,
-		SplitY:     EvenSplit,
+func (g Grid) Redraw(drw draw.Image, bounds image.Rectangle) {
+	col := g.Background
+	if col == nil {
+		col = image.Black
 	}
-	for _, f := range options {
-		f(ret)
-	}
-	return ret
+	draw.Draw(drw, bounds, image.NewUniform(col), image.ZP, draw.Src)
 }
 
-// GridBackground changes the background of the grid to a uniform color.
-func GridBackground(c color.Color) func(*grid) {
-	return func(grid *grid) {
-		grid.Background = c
-	}
-}
-
-// GridGap changes the grid gap.
-// The gap is identical everywhere (top, left, bottom, right).
-func GridGap(g int) func(*grid) {
-	return func(grid *grid) {
-		grid.Gap = g
-	}
-}
-
-// GridSplitX changes the way the space is divided among the columns in each row.
-func GridSplitX(split SplitFunc) func(*grid) {
-	return func(grid *grid) {
-		grid.SplitX = split
-	}
-}
-
-// GridSplitY changes the way the space is divided among the rows.
-func GridSplitY(split SplitFunc) func(*grid) {
-	return func(grid *grid) {
-		grid.SplitY = split
-	}
-}
-
-func (g *grid) Redraw(drw draw.Image, bounds image.Rectangle) {
-	draw.Draw(drw, bounds, image.NewUniform(g.Background), image.ZP, draw.Src)
-}
-
-func (g *grid) Items() []*gui.Env {
-	// 32 should be more than enough for most grids
-	ret := make([]*gui.Env, 0, 32)
-	for _, row := range g.Contents {
-		ret = append(ret, row...)
-	}
-	return ret
-}
-
-func (g *grid) Lay(bounds image.Rectangle) []image.Rectangle {
+func (g Grid) Lay(bounds image.Rectangle) []image.Rectangle {
 	gap := g.Gap
+	rows := g.Rows
+	splitX := g.SplitX
+	if splitX == nil {
+		splitX = EvenSplit
+	}
+	splitY := g.SplitY
+	if splitY == nil {
+		splitY = EvenSplit
+	}
+
 	ret := make([]image.Rectangle, 0)
-	rows := len(g.Contents)
-
-	rowsH := g.SplitY(rows, bounds.Dy()-(g.Gap*(rows+1)))
-
+	rowsH := splitY(len(rows), bounds.Dy()-(gap*(len(rows)+1)))
 	X := gap + bounds.Min.X
 	Y := gap + bounds.Min.Y
-	for y, row := range g.Contents {
-		cols := len(row)
+	for y, cols := range rows {
 		h := rowsH[y]
-		colsW := g.SplitX(cols, bounds.Dx()-(g.Gap*(cols+1)))
+		colsW := splitX(cols, bounds.Dx()-(gap*(cols+1)))
 		X = gap + bounds.Min.X
-		for x := range row {
-			w := colsW[x]
+		for _, w := range colsW {
 			ret = append(ret, image.Rect(X, Y, X+w, Y+h))
 			X += gap + w
 		}

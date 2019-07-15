@@ -1,7 +1,10 @@
 package main
 
 import (
+	"image"
+	"image/draw"
 	"log"
+	"time"
 
 	"github.com/faiface/gui"
 	"github.com/faiface/gui/layout"
@@ -31,6 +34,20 @@ func run() {
 	}
 
 	mux, env := gui.NewMux(w)
+
+	go func() {
+		// Hack for non-reparenting window managers (I think)
+		e := mux.MakeEnv()
+		for {
+			time.Sleep(time.Second / 5)
+			e.Draw() <- func(drw draw.Image) image.Rectangle {
+				r := image.Rect(0, 0, 10, 10)
+				draw.Draw(drw, r, image.Transparent, image.ZP, draw.Over)
+				return r
+			}
+		}
+	}()
+
 	var (
 		top                             gui.Env
 		left, right                     gui.Env
@@ -38,15 +55,15 @@ func run() {
 	)
 	layout.NewMux(
 		mux.MakeEnv(),
-		layout.NewGrid(
-			[][]*gui.Env{
-				{&top},
-				{&left, &right},
-				{&bottomLeft, &bottom, &bottomRight},
-			},
-			layout.GridGap(10),
-			layout.GridBackground(colornames.Sandybrown),
-			layout.GridSplitY(func(els int, width int) []int {
+		[]*gui.Env{
+			&top,
+			&left, &right,
+			&bottomLeft, &bottom, &bottomRight},
+		layout.Grid{
+			Rows:       []int{1, 2, 3},
+			Gap:        10,
+			Background: colornames.Sandybrown,
+			SplitY: func(els int, width int) []int {
 				ret := make([]int, els)
 				total := 0
 				for i := 0; i < els; i++ {
@@ -59,8 +76,8 @@ func run() {
 					}
 				}
 				return ret
-			}),
-		),
+			},
+		},
 	)
 	go Blinker(right)
 	go Blinker(left)
@@ -70,24 +87,21 @@ func run() {
 		b1, b2, b3, b4, b5, b6 gui.Env
 	)
 	layout.NewMux(top,
-		layout.NewBox(
-			[]*gui.Env{
-				&b1, &b2, &b3,
-			},
-			layout.BoxGap(10),
-			layout.BoxBackground(colornames.Lightblue),
-		),
+		[]*gui.Env{&b1, &b2, &b3},
+		layout.Box{
+			Length:     3,
+			Gap:        10,
+			Background: colornames.Lightblue,
+		},
 	)
 	go Blinker(b1)
 	go Blinker(b2)
-	box := layout.NewBox(
-		[]*gui.Env{
-			&b4, &b5, &b6,
-		},
-		layout.BoxVertical,
-		layout.BoxBackground(colornames.Pink),
-		layout.BoxGap(4),
-		layout.BoxSplit(func(els int, width int) []int {
+	box := layout.Box{
+		Length:     4,
+		Vertical:   true,
+		Gap:        4,
+		Background: colornames.Pink,
+		Split: func(els int, width int) []int {
 			ret := make([]int, els)
 			total := 0
 			for i := 0; i < els-1; i++ {
@@ -97,10 +111,15 @@ func run() {
 			}
 			ret[els-1] = width - total
 			return ret
-		}),
+		},
+	}
+
+	layout.NewMux(b3,
+		[]*gui.Env{
+			&b4, &b5, &b6,
+		},
+		box,
 	)
-	layout.NewMux(b3, box)
-	log.Print(box)
 
 	go Blinker(b4)
 	go Blinker(b5)
@@ -111,13 +130,12 @@ func run() {
 	)
 	layout.NewMux(
 		bottom,
-		layout.NewGrid(
-			[][]*gui.Env{
-				{&btn1, &btn2, &btn3},
-			},
-			layout.GridGap(4),
-			layout.GridBackground(colornames.Darkgrey),
-		),
+		[]*gui.Env{&btn1, &btn2, &btn3},
+		layout.Grid{
+			Rows:       []int{2, 1},
+			Background: colornames.Darkgrey,
+			Gap:        4,
+		},
 	)
 	btn := func(env gui.Env, name string) {
 		Button(env, theme, name, func() {
