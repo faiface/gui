@@ -62,14 +62,13 @@ func NewMux(env gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
 			mux.mu.Lock()
 			if resize, ok := e.(gui.Resize); ok {
 				mux.lastResize = resize
+				rect := resize.Rectangle
 				lay := mux.layout.Lay(rect)
 				if len(lay) != len(mux.eventsIns) {
 					log.Printf("Lay of %T has %d elements while mux has %d, skipping\n", l, len(lay), len(envs))
 					mux.mu.Unlock()
 					continue
 				}
-
-				rect := resize.Rectangle
 
 				// Redraw self
 				mux.draw <- func(drw draw.Image) image.Rectangle {

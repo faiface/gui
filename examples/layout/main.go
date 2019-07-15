@@ -97,7 +97,7 @@ func run() {
 	go Blinker(b1)
 	go Blinker(b2)
 	box := layout.Box{
-		Length:     4,
+		Length:     3,
 		Vertical:   true,
 		Gap:        4,
 		Background: colornames.Pink,

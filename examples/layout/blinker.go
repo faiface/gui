@@ -40,11 +40,8 @@ func Blinker(env gui.Env) {
 			case win.MoDown:
 				if event.Point.In(r) {
 					go func() {
-						for i := 0; i < 3; i++ {
-							visible = false
-							env.Draw() <- redraw()
-							time.Sleep(time.Second / 3)
-							visible = true
+						for i := 0; i < 6; i++ {
+							visible = !visible
 							env.Draw() <- redraw()
 							time.Sleep(time.Second / 3)
 						}
