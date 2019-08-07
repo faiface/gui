@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 	"log"
+	"os"
 	"time"
 
 	"github.com/faiface/gui"
@@ -13,6 +15,14 @@ import (
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font/gofont/goregular"
 )
+
+func makeEnvPtr(n int) []*gui.Env {
+	elsp := make([]*gui.Env, n)
+	for i := 0; i < len(elsp); i++ {
+		elsp[i] = new(gui.Env)
+	}
+	return elsp
+}
 
 func run() {
 	face, err := TTFToFace(goregular.TTF, 18)
@@ -26,7 +36,8 @@ func run() {
 		Text:       colornames.Black,
 		Highlight:  colornames.Blueviolet,
 		ButtonUp:   colornames.Lightgrey,
-		ButtonDown: colornames.Grey,
+		ButtonOver: colornames.Grey,
+		ButtonDown: colornames.Dimgrey,
 	}
 	w, err := win.New(win.Title("gui test")) // win.Resizable(),
 	if err != nil {
@@ -39,7 +50,7 @@ func run() {
 		// Hack for non-reparenting window managers (I think)
 		e := mux.MakeEnv()
 		for {
-			time.Sleep(time.Second / 5)
+			time.Sleep(time.Second / 10)
 			e.Draw() <- func(drw draw.Image) image.Rectangle {
 				r := image.Rect(0, 0, 10, 10)
 				draw.Draw(drw, r, image.Transparent, image.ZP, draw.Over)
@@ -60,21 +71,21 @@ func run() {
 			&left, &right,
 			&bottomLeft, &bottom, &bottomRight},
 		layout.Grid{
-			Rows:       []int{1, 2, 3},
-			Gap:        10,
-			Background: colornames.Sandybrown,
-			SplitY: func(els int, width int) []int {
+			Rows:   []int{1, 2, 3},
+			Gap:    10,
+			Margin: -6,
+			Border: 1,
+			// Flip:        true,
+			BorderColor: image.White,
+			Background:  colornames.Sandybrown,
+			SplitRows: func(els int, width int) []int {
 				ret := make([]int, els)
 				total := 0
-				for i := 0; i < els; i++ {
-					if i == els-1 {
-						ret[i] = width - total
-					} else {
-						v := (width - total) / 2
-						ret[i] = v
-						total += v
-					}
+				for i := 0; i < els-1; i++ {
+					ret[i] = (width - total) / 2
+					total += ret[i]
 				}
+				ret[els-1] = width - total
 				return ret
 			},
 		},
@@ -83,22 +94,36 @@ func run() {
 	go Blinker(left)
 	go Blinker(bottomRight)
 
-	var (
-		b1, b2, b3, b4, b5, b6 gui.Env
-	)
+	subGrid := makeEnvPtr(3)
 	layout.NewMux(top,
-		[]*gui.Env{&b1, &b2, &b3},
-		layout.Box{
-			Length:     3,
+		subGrid,
+		layout.Grid{
+			Rows:       []int{len(subGrid)},
 			Gap:        10,
 			Background: colornames.Lightblue,
 		},
 	)
-	go Blinker(b1)
-	go Blinker(b2)
-	box := layout.Box{
-		Length:     3,
-		Vertical:   true,
+
+	elsp := makeEnvPtr(100)
+	scrl := &layout.Scroller{
+		Background:  colornames.Red,
+		Length:      len(elsp),
+		Gap:         2,
+		ChildHeight: 80,
+	}
+	layout.NewMux(*subGrid[0],
+		elsp,
+		scrl,
+	)
+	for i, el := range elsp {
+		// go Blinker(*el)
+		go Card(*el, theme, "hello", fmt.Sprintf("I'm card #%d", i))
+	}
+
+	go Blinker(*subGrid[1])
+	box := layout.Grid{
+		Rows:       []int{3},
+		Flip:       true,
 		Gap:        4,
 		Background: colornames.Pink,
 		Split: func(els int, width int) []int {
@@ -113,28 +138,25 @@ func run() {
 			return ret
 		},
 	}
-
-	layout.NewMux(b3,
-		[]*gui.Env{
-			&b4, &b5, &b6,
-		},
+	blinkers := makeEnvPtr(3)
+	layout.NewMux(*subGrid[2],
+		blinkers,
 		box,
 	)
 
-	go Blinker(b4)
-	go Blinker(b5)
-	go Blinker(b6)
+	go Blinker(*blinkers[0])
+	go Blinker(*blinkers[1])
+	go Blinker(*blinkers[2])
 
-	var (
-		btn1, btn2, btn3 gui.Env
-	)
+	btns := makeEnvPtr(3)
 	layout.NewMux(
 		bottom,
-		[]*gui.Env{&btn1, &btn2, &btn3},
+		btns,
 		layout.Grid{
 			Rows:       []int{2, 1},
 			Background: colornames.Darkgrey,
 			Gap:        4,
+			Flip:       true,
 		},
 	)
 	btn := func(env gui.Env, name string) {
@@ -142,15 +164,16 @@ func run() {
 			log.Print(name)
 		})
 	}
-	go btn(btn1, "Hey")
-	go btn(btn2, "Ho")
-	go btn(btn3, "Hu")
+	go btn(*btns[0], "Hey")
+	go btn(*btns[1], "Ho")
+	go btn(*btns[2], "Hu")
 
 	// we use the master env now, w is used by the mux
 	for event := range env.Events() {
 		switch event.(type) {
 		case win.WiClose:
 			close(env.Draw())
+			os.Exit(0)
 		}
 	}
 }

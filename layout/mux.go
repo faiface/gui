@@ -21,7 +21,6 @@ type Mux struct {
 	eventsIns  []chan<- gui.Event
 	draw       chan<- func(draw.Image) image.Rectangle
 
-	evIn   chan<- gui.Event
 	layout Layout
 }
 
@@ -33,7 +32,8 @@ func (mux *Mux) Layout() Layout {
 // NewMux should only be used internally by Layouts.
 // It has mostly the same behaviour as gui.Mux, except for its use of an underlying Layout
 // for modifying the gui.Resize events sent to the childs.
-func NewMux(env gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
+func NewMux(ev gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
+	env := l.Intercept(ev)
 	drawChan := make(chan func(draw.Image) image.Rectangle)
 	mux = &Mux{
 		layout: l,
@@ -41,7 +41,6 @@ func NewMux(env gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
 	}
 	master, masterIn := mux.makeEnv(true)
 	events := make(chan gui.Event)
-	mux.evIn = events
 	go func() {
 		for d := range drawChan {
 			env.Draw() <- d
@@ -64,16 +63,10 @@ func NewMux(env gui.Env, envs []*gui.Env, l Layout) (mux *Mux, master gui.Env) {
 				mux.lastResize = resize
 				rect := resize.Rectangle
 				lay := mux.layout.Lay(rect)
-				if len(lay) != len(mux.eventsIns) {
-					log.Printf("Lay of %T has %d elements while mux has %d, skipping\n", l, len(lay), len(envs))
+				if len(lay) < len(envs) {
+					log.Printf("Lay of %T is not large enough (%d) for %d childs, skipping\n", l, len(lay), len(envs))
 					mux.mu.Unlock()
 					continue
-				}
-
-				// Redraw self
-				mux.draw <- func(drw draw.Image) image.Rectangle {
-					mux.layout.Redraw(drw, rect)
-					return rect
 				}
 
 				// Send appropriate resize Events to childs
@@ -172,7 +165,6 @@ func (mux *Mux) makeEnv(master bool) (env gui.Env, eventsIn chan<- gui.Event) {
 				mux.eventsIns = append(mux.eventsIns[:i], mux.eventsIns[i+1:]...)
 			}
 			mux.mu.Unlock()
-			mux.evIn <- mux.lastResize
 		}
 	}()
 

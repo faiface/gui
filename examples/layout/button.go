@@ -40,6 +40,13 @@ func Button(env gui.Env, theme *Theme, text string, action func()) {
 			r = e.Rectangle
 			env.Draw() <- redraw(r, over, pressed)
 
+		case win.MoMove:
+			nover := e.Point.In(r)
+			if nover != over {
+				over = nover
+				env.Draw() <- redraw(r, over, pressed)
+			}
+
 		case win.MoDown:
 			newPressed := e.Point.In(r)
 			if newPressed != pressed {
