@@ -13,6 +13,9 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
+// FrameDelay - usualy 1/60th of a second.
+const FrameDelay time.Duration = time.Duration(int64(time.Second) / 60)
+
 // Option is a functional option to the window constructor New.
 type Option func(*options)
 
@@ -262,6 +265,7 @@ func (w *Win) eventThread() {
 	r := w.img.Bounds()
 	w.eventsIn <- gui.Resize{Rectangle: r}
 
+	t := time.Now()
 	for {
 		select {
 		case <-w.finish:
@@ -269,7 +273,11 @@ func (w *Win) eventThread() {
 			w.w.Destroy()
 			return
 		default:
-			glfw.WaitEventsTimeout(1.0 / 30)
+			dif := time.Now().Sub(t)
+			if dif > FrameDelay {
+				glfw.WaitEventsTimeout(1.0 / 30)
+				t = time.Now()
+			}
 		}
 	}
 }
@@ -302,7 +310,7 @@ loop:
 
 		for {
 			select {
-			case <-time.After(time.Second / 960):
+			case <-time.After(FrameDelay):
 				w.openGLFlush(totalR)
 				totalR = image.ZR
 				continue loop
