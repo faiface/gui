@@ -265,6 +265,7 @@ func (w *Win) eventThread() {
 	r := w.img.Bounds()
 	w.eventsIn <- gui.Resize{Rectangle: r}
 
+	t := time.Now()
 	for {
 		select {
 		case <-w.finish:
@@ -272,7 +273,11 @@ func (w *Win) eventThread() {
 			w.w.Destroy()
 			return
 		default:
-			glfw.WaitEventsTimeout(1.0 / 30)
+			dif := time.Now().Sub(t)
+			if dif > FrameDelay {
+				glfw.WaitEventsTimeout(1.0 / 30)
+				t = time.Now()
+			}
 		}
 	}
 }
