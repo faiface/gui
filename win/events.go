@@ -43,6 +43,9 @@ type (
 	// WiClose is an event that happens when the user presses the close button on the window.
 	WiClose struct{}
 
+	// WiRefresh is an event that happens when the user opens the window after minimizing.
+	WiRefresh struct{}
+
 	// MoMove is an event that happens when the mouse gets moved across the window.
 	MoMove struct{ image.Point }
 
@@ -78,7 +81,8 @@ type (
 	KbRepeat struct{ Key Key }
 )
 
-func (wc WiClose) String() string  { return "wi/close" }
+func (WiClose) String() string     { return "wi/close" }
+func (WiRefresh) String() string   { return "wi/refresh" }
 func (mm MoMove) String() string   { return fmt.Sprintf("mo/move/%d/%d", mm.X, mm.Y) }
 func (md MoDown) String() string   { return fmt.Sprintf("mo/down/%d/%d/%s", md.X, md.Y, md.Button) }
 func (mu MoUp) String() string     { return fmt.Sprintf("mo/up/%d/%d/%s", mu.X, mu.Y, mu.Button) }

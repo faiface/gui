@@ -255,8 +255,12 @@ func (w *Win) eventThread() {
 		w.eventsIn <- gui.Resize{Rectangle: r}
 	})
 
-	w.w.SetCloseCallback(func(_ *glfw.Window) {
+	w.w.SetCloseCallback(func(*glfw.Window) {
 		w.eventsIn <- WiClose{}
+	})
+
+	w.w.SetRefreshCallback(func(*glfw.Window) {
+		w.eventsIn <- WiRefresh{}
 	})
 
 	r := w.img.Bounds()
@@ -276,7 +280,9 @@ func (w *Win) eventThread() {
 
 func (w *Win) openGLThread() {
 	w.w.MakeContextCurrent()
-	gl.Init()
+	if err := gl.Init(); err != nil {
+		panic(err)
+	}
 
 	w.openGLFlush(w.img.Bounds())
 
@@ -304,7 +310,7 @@ loop:
 			select {
 			case <-time.After(time.Second / 960):
 				w.openGLFlush(totalR)
-				totalR = image.ZR
+				totalR = image.Rectangle{}
 				continue loop
 
 			case r := <-w.newSize:
