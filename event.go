@@ -11,7 +11,7 @@ import (
 // may implement more kinds of events. For example, the win package implements all kinds of
 // events for mouse and keyboard.
 type Event interface {
-	String() string
+	EventString() string
 }
 
 // Resize is an event that happens when the environment changes the size of its drawing area.
@@ -19,7 +19,7 @@ type Resize struct {
 	image.Rectangle
 }
 
-func (r Resize) String() string {
+func (r Resize) EventString() string {
 	return fmt.Sprintf("resize/%d/%d/%d/%d", r.Min.X, r.Min.Y, r.Max.X, r.Max.Y)
 }
 

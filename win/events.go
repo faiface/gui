@@ -81,13 +81,13 @@ type (
 	KbRepeat struct{ Key Key }
 )
 
-func (WiClose) String() string     { return "wi/close" }
-func (WiRefresh) String() string   { return "wi/refresh" }
-func (mm MoMove) String() string   { return fmt.Sprintf("mo/move/%d/%d", mm.X, mm.Y) }
-func (md MoDown) String() string   { return fmt.Sprintf("mo/down/%d/%d/%s", md.X, md.Y, md.Button) }
-func (mu MoUp) String() string     { return fmt.Sprintf("mo/up/%d/%d/%s", mu.X, mu.Y, mu.Button) }
-func (ms MoScroll) String() string { return fmt.Sprintf("mo/scroll/%d/%d", ms.X, ms.Y) }
-func (kt KbType) String() string   { return fmt.Sprintf("kb/type/%d", kt.Rune) }
-func (kd KbDown) String() string   { return fmt.Sprintf("kb/down/%s", kd.Key) }
-func (ku KbUp) String() string     { return fmt.Sprintf("kb/up/%s", ku.Key) }
-func (kr KbRepeat) String() string { return fmt.Sprintf("kb/repeat/%s", kr.Key) }
+func (WiClose) EventString() string     { return "wi/close" }
+func (WiRefresh) EventString() string   { return "wi/refresh" }
+func (mm MoMove) EventString() string   { return fmt.Sprintf("mo/move/%d/%d", mm.X, mm.Y) }
+func (md MoDown) EventString() string   { return fmt.Sprintf("mo/down/%d/%d/%s", md.X, md.Y, md.Button) }
+func (mu MoUp) EventString() string     { return fmt.Sprintf("mo/up/%d/%d/%s", mu.X, mu.Y, mu.Button) }
+func (ms MoScroll) EventString() string { return fmt.Sprintf("mo/scroll/%d/%d", ms.X, ms.Y) }
+func (kt KbType) EventString() string   { return fmt.Sprintf("kb/type/%d", kt.Rune) }
+func (kd KbDown) EventString() string   { return fmt.Sprintf("kb/down/%s", kd.Key) }
+func (ku KbUp) EventString() string     { return fmt.Sprintf("kb/up/%s", ku.Key) }
+func (kr KbRepeat) EventString() string { return fmt.Sprintf("kb/repeat/%s", kr.Key) }
