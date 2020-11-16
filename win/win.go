@@ -234,11 +234,13 @@ func (w *Win) eventThread() {
 		w.eventsIn <- KbType{r}
 	})
 
-	w.w.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, _ glfw.ModifierKey) {
+	w.w.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, _ int, action glfw.Action, _ glfw.ModifierKey) {		
+		/* Just let all keys through? Why do we validate this here? It prevents most keys from becoming events
 		k, ok := keys[key]
 		if !ok {
 			return
 		}
+		*/
 		switch action {
 		case glfw.Press:
 			w.eventsIn <- KbDown{k}
